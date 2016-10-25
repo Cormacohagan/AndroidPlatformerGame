@@ -1,0 +1,76 @@
+package com.gamedev.techtronic.lunargame.Screens;
+
+import android.graphics.Color;
+import android.graphics.Paint;
+import android.util.Log;
+
+import com.gamedev.techtronic.lunargame.LunarGame;
+import com.gamedev.techtronic.lunargame.gage.Game;
+import com.gamedev.techtronic.lunargame.gage.engine.ElapsedTime;
+import com.gamedev.techtronic.lunargame.gage.engine.graphics.IGraphics2D;
+import com.gamedev.techtronic.lunargame.gage.ui.PushButton;
+import com.gamedev.techtronic.lunargame.gage.world.GameObject;
+import com.gamedev.techtronic.lunargame.gage.world.GameScreen;
+
+public class LunarScoreScreen extends GameScreen {
+
+    private LunarGame game;
+    private Paint backgroundPaint;
+
+    //Default constructor for the score screen
+    public LunarScoreScreen(Game game) {
+        super("LunarScoreScreen", game);
+
+        super.initViewports(500.0F, 287.0F, 500.0F);
+        super.initAssets();
+        this.addComponents();
+    }
+
+    //Initialise all graphical assets used in the score screen
+    protected void initBitmaps() {
+
+
+    }
+
+    //Initialise all audio assets used in the score screen
+    protected void initSounds() {}
+
+    //Add game objects to the score screen
+    protected void addComponents() {
+
+        game = (LunarGame)this.getGame();
+
+        backgroundPaint = new Paint();
+        backgroundPaint.setStyle(Paint.Style.FILL);
+        backgroundPaint.setColor(Color.DKGRAY);
+
+    }
+
+    private void resolveTouchEvents(LunarGame game) {
+
+    }
+
+    //The score screen's update method
+    @Override
+    public void update(ElapsedTime elapsedTime){
+
+        resolveTouchEvents(game);
+
+    }
+
+    //The score screen's render method
+    @Override
+    public void draw(ElapsedTime elapsedTime, IGraphics2D graphics2D){
+
+        graphics2D.drawRect(mScreenViewport.left, mScreenViewport.top,
+                mScreenViewport.right, mScreenViewport.bottom, backgroundPaint);
+
+    }
+
+    @Override
+    public void dispose() {
+        mGame.getScreenManager().dispose();
+    }
+
+}
+

@@ -1,0 +1,93 @@
+package com.gamedev.techtronic.lunargame.Level.Entities;
+
+import android.graphics.Bitmap;
+
+import com.gamedev.techtronic.lunargame.Character.Player;
+import com.gamedev.techtronic.lunargame.Screens.LunarGameScreen;
+import com.gamedev.techtronic.lunargame.gage.engine.ElapsedTime;
+import com.gamedev.techtronic.lunargame.gage.engine.ScreenManager;
+import com.gamedev.techtronic.lunargame.gage.util.BoundingBox;
+import com.gamedev.techtronic.lunargame.gage.world.GameScreen;
+import com.gamedev.techtronic.lunargame.gage.world.Sprite;
+
+public class Key extends Sprite {
+
+    private int floatAmountTracker, floatHeight, floatRate, floatRateCount;
+    private boolean floatDirectionTracker, collected;
+    private float x, y, playerX, playerY;
+    private BoundingBox playerBoundingBox;
+    private LunarGameScreen lunarGameScreen;
+
+    public Key(float x, float y, float width, float height, Bitmap bitmap,
+               GameScreen gameScreen) {
+        super(x, y, width, height, bitmap, gameScreen);
+
+        /*ScreenManager screenManager = this.mGameScreen.getGame().getScreenManager();
+
+        lunarGameScreen = screenManager.getCurrentScreen();*/
+
+        this.x = x;
+        this.y = y;
+        floatAmountTracker = 0;
+        floatRate = 10;
+        floatHeight = 5;
+        floatDirectionTracker = false;
+        collected = false;
+    }
+
+    public void update(ElapsedTime elapsedTime) {
+
+        if (!collected) {
+
+            floatRateCount++;
+            if (floatRate == 0) {
+
+            } else if (floatRateCount >= floatRate) {
+                floatKey();
+                floatRateCount = 0;
+            }
+        }
+        else {
+            playerBoundingBox = lunarGameScreen.player.getBound();
+            playerX = playerBoundingBox.x;
+            playerY = playerBoundingBox.y;
+            if (lunarGameScreen.player.isFacingRight()) {
+                playerX += playerBoundingBox.halfWidth;
+            }
+            else {
+                playerX -= playerBoundingBox.halfWidth;
+            }
+            setPosition(playerX, playerY);
+        }
+
+        super.update(elapsedTime);
+    }
+
+    public void floatKey() {
+
+        floatAmountTracker++;
+
+        if (!floatDirectionTracker) {
+            setPosition(x, y++);
+            if (floatAmountTracker >=floatHeight) {
+                floatDirectionTracker = true;
+                floatAmountTracker = 0;
+            }
+        }
+        else {
+            setPosition(x, y--);
+            if (floatAmountTracker >=floatHeight) {
+                floatDirectionTracker = false;
+                floatAmountTracker = 0;
+            }
+        }
+    }
+
+    public void setFloatRate(int floatRate) {
+        this.floatRate = floatRate;
+    }
+
+    public void setCollected(boolean collected) {
+        this.collected = collected;
+    }
+}

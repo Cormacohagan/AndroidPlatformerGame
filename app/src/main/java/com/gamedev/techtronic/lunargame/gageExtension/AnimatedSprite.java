@@ -1,0 +1,166 @@
+package com.gamedev.techtronic.lunargame.gageExtension;
+
+
+import android.graphics.Bitmap;
+import android.graphics.Rect;
+import android.util.Log;
+
+import com.gamedev.techtronic.lunargame.gage.engine.ElapsedTime;
+import com.gamedev.techtronic.lunargame.gage.engine.graphics.IGraphics2D;
+import com.gamedev.techtronic.lunargame.gage.engine.io.FileIO;
+import com.gamedev.techtronic.lunargame.gage.util.BoundingBox;
+import com.gamedev.techtronic.lunargame.gage.util.GraphicsHelper;
+import com.gamedev.techtronic.lunargame.gage.world.GameScreen;
+import com.gamedev.techtronic.lunargame.gage.world.LayerViewport;
+import com.gamedev.techtronic.lunargame.gage.world.ScreenViewport;
+import com.gamedev.techtronic.lunargame.gage.world.Sprite;
+
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
+import org.xml.sax.SAXException;
+
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
+
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.xpath.XPath;
+import javax.xml.xpath.XPathConstants;
+import javax.xml.xpath.XPathExpressionException;
+import javax.xml.xpath.XPathFactory;
+
+/*
+ * Animated sprite extends the GAGE sprite to allow for animations.
+ *
+ * <p>
+ * BUGS:
+ * -Scaling and rotation non-functional (this is frustratingly difficult, just can't figure it out)
+ * -Sometimes changing animation while midway though an animation can cause the new animation to start on the wrong frame
+ */
+public class AnimatedSprite extends Sprite {
+
+    public Animation mCurrentAnimation;
+
+    private HashMap<String, Animation> animationMap = new HashMap<>();
+    private Rect mSpriteRect = new Rect();
+    private boolean isLooping;
+    private boolean isPlaying = true;
+
+
+    public AnimatedSprite(float x, float y, Bitmap bitmap, GameScreen gameScreen) {
+        super(x, y, bitmap, gameScreen);
+        loadAnimations();
+    }
+
+    public AnimatedSprite(float x, float y, Bitmap bitmap, GameScreen gameScreen, String animationName, Boolean isLooping){
+        super(x, y, bitmap, gameScreen);
+        loadAnimations();
+        this.setAnimation(animationName, isLooping);
+    }
+
+    /**
+     Sets the current Animation using the name of the animation.
+     @param animationName
+            Name of animation (e.g. "player_walking_left")
+     @param isLooping
+            Boolean value determining whether the animation is looping or only plays once
+     @see "assets/xml/spriteAnimations.xml for the list of animations"
+     **/
+    public void setAnimation(String animationName, boolean isLooping){
+        this.isLooping = isLooping;
+
+        mCurrentAnimation = animationMap.get(animationName);
+    }
+
+    private void loadAnimations(){
+        try {
+            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+            DocumentBuilder builder = factory.newDocumentBuilder();
+
+            FileIO f = new FileIO(mGameScreen.getGame().getActivity());
+
+            Document doc = builder.parse(f.readAsset("xml/spriteAnimations"));
+
+            XPath xPath = XPathFactory.newInstance().newXPath();
+
+            String expression = "/Animations/Animation";
+            NodeList nodeList = (NodeList) xPath.compile(expression).evaluate(doc, XPathConstants.NODESET);
+
+            for (int i = 0; i < nodeList.getLength(); i++) {
+                Node nNode = nodeList.item(i);
+                    animationMap.put(((Element) nNode).getAttribute("name"),new Animation(
+                            ((Element) nNode).getAttribute("name"),
+                            Integer.parseInt(((Element) nNode).getAttribute("startX")),
+                            Integer.parseInt(((Element) nNode).getAttribute("startY")),
+                            Integer.parseInt(((Element) nNode).getAttribute("spriteWidth")),
+                            Integer.parseInt(((Element) nNode).getAttribute("spriteHeight")),
+                            Integer.parseInt(((Element) nNode).getAttribute("frameCount")),
+                            Integer.parseInt(((Element) nNode).getAttribute("frameRate"))
+                    ));
+                }
+        }catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Controls how the animation changes frames and should be run every update.
+     * @param elapsedTime
+     *          The amount of time elapsed since last frame
+     */
+    private void stepAnimation(ElapsedTime elapsedTime){
+
+            if (isPlaying) {
+                // Every call work out what frame needs to be displayed and update the mSpriteRect
+                int frame = (int) (mCurrentAnimation.getFrameRate() * elapsedTime.totalTime % mCurrentAnimation.getFrameCount());
+                mSpriteRect.left = mCurrentAnimation.getStartX();
+                mSpriteRect.top = mCurrentAnimation.getStartY();
+                mSpriteRect.right = mCurrentAnimation.getStartX() + mCurrentAnimation.getSpriteWidth();
+                mSpriteRect.bottom = mCurrentAnimation.getStartY() + mCurrentAnimation.getSpriteHeight();
+                mSpriteRect.offset(mCurrentAnimation.getSpriteWidth() * frame, 0);
+
+
+                if ((!isLooping) & (frame == mCurrentAnimation.getFrameCount() - 1)) {
+                    isPlaying = false;
+                }
+            }
+
+        }
+
+    @Override
+    public void update(ElapsedTime elapsedTime) {
+        // Exactly the same as for a regular sprite but calls stepAnimation() at the end.
+        super.update(elapsedTime);
+        stepAnimation(elapsedTime);
+    }
+
+    @Override
+    public void draw(ElapsedTime elapsedTime, IGraphics2D graphics2D, LayerViewport layerViewport, ScreenViewport screenViewport) {
+
+        // If the sprite is on-screen draw it
+        if (GraphicsHelper.getSourceAndScreenRect(this, layerViewport, screenViewport, drawSourceRect ,drawScreenRect)){
+            graphics2D.drawBitmap(mBitmap, mSpriteRect,drawScreenRect,null);
+        }
+    }
+
+    
+    /**
+     * Gets the bound of the current frame of the animated sprite.<p>
+     * Note: Animations will usually contain frames of the same size.
+     * @return
+     *      Bounding box the size of the animated sprite
+     */
+    @Override
+    public BoundingBox getBound() {
+        mBound.x = position.x;
+        mBound.y = position.y;
+        mBound.halfWidth = mCurrentAnimation.getSpriteWidth()/2;
+        mBound.halfHeight = mCurrentAnimation.getSpriteHeight()/2;
+        return mBound;
+    }
+}
+

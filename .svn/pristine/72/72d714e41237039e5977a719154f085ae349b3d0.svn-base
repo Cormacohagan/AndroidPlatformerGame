@@ -1,0 +1,68 @@
+package com.gamedev.techtronic.lunargame;
+
+import android.os.Bundle;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+
+import com.gamedev.techtronic.lunargame.Screens.BossScreen;
+import com.gamedev.techtronic.lunargame.Screens.LunarMenuScreen;
+import com.gamedev.techtronic.lunargame.gage.Game;
+
+
+public class LunarGame extends Game {
+
+    private final int targetFPS =60;
+    public boolean isMusicOn;
+    public boolean isSFXOn;
+    public float textSpeed; // default value for text speed in dialogue boxes
+
+    // boolean for toggling debug features e.g. draw Pathfinding paths to screen
+    public static boolean debug = false;
+
+    public LunarGame(){
+        super();
+    }
+
+    @Override
+    public void onCreate(Bundle savedInstanceState){
+        super.onCreate(savedInstanceState);
+
+        setTargetFramesPerSecond(targetFPS);
+    }
+
+    @Override
+    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+        View view = super.onCreateView(inflater, container, savedInstanceState);
+
+        this.initSettings();
+
+        //create gameScreen and add to screen manager
+        //BossScreen bossScreen = new BossScreen(this);
+        //mScreenManager.addScreen(bossScreen);
+        //mScreenManager.setAsCurrentScreen("bossScreen");
+
+        LunarMenuScreen lunarMenuScreen = new LunarMenuScreen(this);
+        mScreenManager.addScreen(lunarMenuScreen);
+        mScreenManager.setAsCurrentScreen("LunarMenuScreen");
+
+       /* LunarGameScreen lunarGameScreen = new LunarGameScreen(this);
+        mScreenManager.addScreen(lunarGameScreen);
+        mScreenManager.setAsCurrentScreen("LunarGameScreen");*/
+
+        return view;
+    }
+
+    @Override
+    public boolean onBackPressed() {
+        // music will not stop when back button is pressed to exit the app
+        //mAssetManager.getMusic("mainmenuSong").stop();
+        return true;
+    }
+
+    private void initSettings() {
+        this.isMusicOn = true;
+        this.isSFXOn = true;
+        this.textSpeed = 70;
+    }
+}

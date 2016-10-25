@@ -1,0 +1,35 @@
+package com.gamedev.techtronic.lunargame.HUD;
+
+import android.graphics.Bitmap;
+
+import com.gamedev.techtronic.lunargame.gage.engine.ElapsedTime;
+import com.gamedev.techtronic.lunargame.gage.engine.graphics.IGraphics2D;
+import com.gamedev.techtronic.lunargame.gage.world.GameScreen;
+import com.gamedev.techtronic.lunargame.gage.world.LayerViewport;
+import com.gamedev.techtronic.lunargame.gage.world.ScreenViewport;
+
+/**
+ * Created by Jack on 25-Feb-16.
+ */
+public class HUDLabel extends HUDElement {
+    public static float letterWidth = 30.0F;
+    public static float letterHeight = 40.0F;
+
+    public HUDLabel(String name, float x, float y, Bitmap bitmap, GameScreen gameScreen) {
+        super(name.toLowerCase(), x, y, bitmap, gameScreen);
+    }
+
+    @Override
+    public void draw(ElapsedTime elapsedTime, IGraphics2D graphics2D, LayerViewport layerViewport, ScreenViewport screenViewport) {
+        float x = super.position.x;
+        float y = super.position.y;
+
+        for (int i = 0; i < this.name.length(); i++) {
+            char c = this.name.charAt(i);
+            drawScreenRect.set((int) x, (int) y, (int) (x + letterWidth), (int) (y + letterHeight));
+            drawSourceRect.set((int) ((c - 97) * letterWidth), 0, (int) ((c - 97) * letterWidth + letterWidth), (int) letterHeight);
+            graphics2D.drawBitmap(mBitmap, drawSourceRect, drawScreenRect, null);
+            x += letterWidth;
+        }
+    }
+}

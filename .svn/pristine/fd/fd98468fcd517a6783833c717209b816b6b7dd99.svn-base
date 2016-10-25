@@ -1,0 +1,71 @@
+package com.gamedev.techtronic.lunargame.Misc;
+
+import java.net.InetAddress;
+import java.net.URL;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.ResultSet;
+import java.sql.Statement;
+
+
+/*
+CE:
+Rough working implementation of connecting to a mySQL database server (CE's local RasperryPi)
+Only functions locally at the moment, but im working on allowing connection over internet
+Send player high score information, get the current leaderboard back
+I suspect in terms of security this method wouldn't be great for final production, but it'd probly
+be a lot of dev time to write a method of authentication/server obfuscation.
+
+Threaded due to connection timeout potentially taking minutes! (can't find a fix/change for that)
+
+If one of you guys who did the databases module wants to have a look, or has any neat ideas about how
+to improve this, let me know. It's still in a very early iteration.
+*/
+
+// Attempt made at internet access, I unfortunately cannot test this due to addressLoop back or something like that.
+
+public class HighScoreServer extends Thread {
+    Connection conn;
+
+    @Override
+    public void run() {
+        try {
+
+            Class.forName("com.mysql.jdbc.Driver").newInstance();
+
+            URL url = new URL("http://ciaran-ewingjames.ddns.net");
+            InetAddress address = InetAddress.getByName(url.getHost());
+
+            conn = DriverManager.getConnection("jdbc:mysql://"+address+"/lunarGame", "player", "123");
+            Statement stmt = conn.createStatement();
+
+            String strSelect;
+
+            strSelect = "DELETE FROM highScores WHERE playerId=1";
+            stmt.execute(strSelect);
+
+            strSelect = "INSERT INTO highScores VALUES(1,\"Sans\",12345)";
+            stmt.execute(strSelect);
+
+            strSelect = "SELECT * FROM highScores ORDER BY score DESC;";
+            ResultSet rset = stmt.executeQuery(strSelect);
+
+            System.out.println("The records selected are:");
+
+            int rowCount = 0;
+            while(rset.next()) {   // Move the cursor to the next row
+                int id = rset.getInt("playerId");
+                String name = rset.getString("playerName");
+                int    score  = rset.getInt("score");
+                System.out.println(id + ", " + name + ", " + score);
+                ++rowCount;
+            }
+
+            conn.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+    }
+
+}

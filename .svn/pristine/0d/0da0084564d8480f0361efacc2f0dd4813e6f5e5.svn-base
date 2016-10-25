@@ -1,0 +1,16 @@
+package com.gamedev.techtronic.lunargame.Level.Entities;
+
+import android.graphics.Bitmap;
+
+import com.gamedev.techtronic.lunargame.gage.util.BoundingBox;
+import com.gamedev.techtronic.lunargame.gage.world.GameScreen;
+import com.gamedev.techtronic.lunargame.gageExtension.AnimatedSprite;
+
+public class PickUp extends AnimatedSprite {
+
+    public PickUp(float x, float y, Bitmap bitmap, GameScreen gameScreen, String animationName, Boolean isLooping) {
+        super(x, y, bitmap, gameScreen, animationName, isLooping);
+    }
+
+
+}

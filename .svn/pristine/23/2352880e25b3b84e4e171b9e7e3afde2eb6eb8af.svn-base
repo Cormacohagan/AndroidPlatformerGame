@@ -1,0 +1,51 @@
+package com.gamedev.techtronic.lunargame;
+
+import android.app.Activity;
+import android.app.FragmentManager;
+import android.content.Context;
+import android.os.Bundle;
+import android.view.Window;
+import android.view.WindowManager;
+
+import com.gamedev.techtronic.lunargame.gage.Game;
+
+public class MainActivity extends Activity {
+
+    private Game mGame;
+    private Context c;
+
+    /* Activity displays contents of it's associated XML file (activity_main)
+    Activity.onCreate() creates a fragment and adds it to the activity's XML file (using XML file's ID, "activity_main_id")
+    Fragment's XML file contents is ultimately what is displayed in our game,
+    but in the future we will be drawing to the fragment ourselves, rather than using XML
+     */
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        // calling superconstructor
+        super.onCreate(savedInstanceState);
+
+        // returns window activity is using
+        Window window = getWindow();
+
+        // applying settings suitable for our game
+        window.requestFeature(Window.FEATURE_NO_TITLE); // removes titlebar
+        window.addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN); // sets window to fullscreen
+        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON); // stops screen dimming
+        setContentView(R.layout.activity_fragment);
+
+        FragmentManager fm = getFragmentManager();
+        // check if fragment already exists (as activity may have been ran before)
+        // asking fragment manager "do you manage a fragment with this id?"
+        // manager then looks for fragment id in activity xml file
+        mGame = (Game)fm.findFragmentById(R.id.activity_fragment_id);
+
+        // if fragment doesn't exist in activity xml file..
+        if (mGame == null) {
+            mGame = new LunarGame();
+            fm.beginTransaction().add(R.id.activity_fragment_id, mGame)
+                    .commit();
+        }
+    }
+
+
+}

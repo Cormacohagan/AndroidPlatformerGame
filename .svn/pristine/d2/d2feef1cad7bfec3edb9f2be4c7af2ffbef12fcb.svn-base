@@ -1,0 +1,19 @@
+package com.gamedev.techtronic.lunargame;
+
+import android.graphics.Bitmap;
+
+import com.gamedev.techtronic.lunargame.Projectile;
+import com.gamedev.techtronic.lunargame.gage.world.GameObject;
+import com.gamedev.techtronic.lunargame.gage.world.GameScreen;
+
+/**
+ * Created by Cormac O'Hagan on 01/03/2016.
+ */
+public class PlayerProjectile extends Projectile {
+
+    public PlayerProjectile(float x, float y, Bitmap bitmap, GameScreen gameScreen, String animationName, Boolean isLooping) {
+        super(x, y, bitmap, gameScreen, animationName, isLooping);
+
+
+    }
+}

@@ -1,0 +1,256 @@
+package com.gamedev.techtronic.lunargame.Level.Entities;
+
+import android.graphics.Bitmap;
+import android.graphics.Color;
+import android.graphics.Paint;
+import android.graphics.Path;
+import android.graphics.Rect;
+import android.util.Log;
+
+import com.gamedev.techtronic.lunargame.gage.engine.ElapsedTime;
+import com.gamedev.techtronic.lunargame.gage.engine.graphics.IGraphics2D;
+import com.gamedev.techtronic.lunargame.gage.util.BoundingBox;
+import com.gamedev.techtronic.lunargame.gage.util.GraphicsHelper;
+import com.gamedev.techtronic.lunargame.gage.util.Vector2;
+import com.gamedev.techtronic.lunargame.gage.world.GameObject;
+import com.gamedev.techtronic.lunargame.gage.world.GameScreen;
+import com.gamedev.techtronic.lunargame.gage.world.LayerViewport;
+import com.gamedev.techtronic.lunargame.gage.world.ScreenViewport;
+import com.gamedev.techtronic.lunargame.gage.world.Sprite;
+
+import java.util.ArrayList;
+
+public class MovingPlatform extends Sprite {
+
+    private int spriteStartX;
+    private int spriteStartY;
+    private int width;
+    private int height;
+    private Rect platRect;
+    private float startPositionX;
+    private float startPositionY;
+    private float endPositionX;
+    private float endPositionY;
+    public GameObject customCollisionBox;
+    private static final int speed = 35;
+//    private Path path;
+//    private Paint paint;
+//    private float screenXScale;
+//    private float screenYScale;
+    private ArrayList<Vector2> movementNodes = new ArrayList<>();
+    private int movementNodeCounter;
+    private boolean isPlatformPositionChecked;
+    private double startTime = 0;
+
+//    private boolean first =true;
+
+    // TODO: CE: Implement automatic generation of moving platforms in level class (levelbuilder.jar eventually too)
+
+    /**CE:
+     * Creates a moving platform. State a set of movement nodes and
+     * the platform will move in a straight line moving towards each in turn, reaching the last node
+     * the platform will move to the first node and repeat.
+     * @param movementNodes
+     *      An arraylist of positions that the platform will travel through in order.
+     *      First position is the initial start position of the platform
+     *
+     */
+    public MovingPlatform(ArrayList<Vector2> movementNodes, Bitmap bitmap, GameScreen gameScreen, int startX, int startY, int spriteWidth, int spriteHeight) {
+
+        // The first node position also serves as the initial position
+        super(movementNodes.get(0).x, movementNodes.get(0).y, bitmap, gameScreen);
+
+        this.movementNodes.addAll(movementNodes);
+
+        // movement counter is 1 since we've already loaded the first set of nodes which the movement counter would have read 0.
+        movementNodeCounter= 1;
+
+        this.spriteStartX = startX;
+        this.spriteStartY = startY;
+        this.width = spriteWidth;
+        this.height = spriteHeight;
+
+        this.startPositionX = this.position.x;
+        this.startPositionY = this.position.y;
+
+        // load the second node position
+        this.endPositionX = this.movementNodes.get(movementNodeCounter).x;
+        this.endPositionY = this.movementNodes.get(movementNodeCounter).y;
+
+        // Using a custom collision box attached to the platform,
+        // custom box is 1 pixel above bounding box of platform
+        // Used in determining if player is on a platform
+        customCollisionBox = new GameObject(this.position.x, this.position.y, gameScreen.getGame().getAssetManager().getBitmap("player"), gameScreen);
+        customCollisionBox.getBound().halfWidth= this.width/2;
+        customCollisionBox.getBound().halfHeight= this.height/2;
+        customCollisionBox.getBound().y += 0.1f;
+
+        // Calculates and implements the initial velocity vector
+        updateVelocity();
+
+        // platform rectangle: specifies what part of image sheet to get when drawing
+        platRect = new Rect(this.spriteStartX, this.spriteStartY, this.spriteStartX+this.width,this.spriteStartY +this.height);
+
+        // platform positions are checked to see if they've reached the end point of their current vector
+        // unless it has just changed vector towards a new end point, in that case this boolean is false
+        // to prevent any jittery platforms when transitioning nodes.
+        // There is likely a clever way to solve this problem with a little more finesse.
+        isPlatformPositionChecked =true;
+
+        // Initialise debug stuff
+//        path = new Path();
+//
+//        paint = new Paint();
+//        paint.setStyle(Paint.Style.STROKE);
+//        paint.setColor(Color.GREEN);
+
+
+    }
+
+    @Override
+    public BoundingBox getBound() {
+        mBound.x = position.x;
+        mBound.y = position.y;
+        mBound.halfWidth = this.width /2;
+        mBound.halfHeight = this.height /2;
+        return mBound;
+    }
+
+    @Override
+    public void update(ElapsedTime elapsedTime) {
+        super.update(elapsedTime);
+
+        // Keep the custom collision box attached to the moving platform
+        customCollisionBox.position.set(this.position.x, this.position.y + 0.1f);
+
+        // isPlatformPositionChecked makes sure that when checking if the platform has reached its destination
+        // the platform check doesn't get stuck changing the velocity and generally being unpredictable
+        // When a destination is reached, send it to the next node and stop checking platforms for a short time,
+        // then resume as normal.
+        if (isPlatformPositionChecked) {
+
+            // Check if the platform has reached it's destination
+            // if platform has reached it's current end position then
+            // load the next start and end position, calculate the vector between these two points
+            // and set the new platform velocity vector
+
+            if (this.velocity.x<0){
+                if ((int) this.position.x < (int) this.endPositionX) {
+
+                    incrementStartAndEndPositionsToNextNodes();
+
+                    updateVelocity();
+
+                    isPlatformPositionChecked =false;
+                    startTime = elapsedTime.totalTime;
+                }
+            }else if (this.velocity.x>0){
+                if ((int) this.position.x > (int) this.endPositionX) {
+
+                    incrementStartAndEndPositionsToNextNodes();
+
+                    updateVelocity();
+
+                    isPlatformPositionChecked =false;
+                    startTime = elapsedTime.totalTime;
+                }
+            }
+
+            if (this.velocity.y<0){
+                if ((int) this.position.y < (int) this.endPositionY) {
+
+                    incrementStartAndEndPositionsToNextNodes();
+
+                    updateVelocity();
+
+                    isPlatformPositionChecked =false;
+                    startTime = elapsedTime.totalTime;
+                }
+            }else if (this.velocity.y>0){
+                if ((int) this.position.y > (int) this.endPositionY) {
+
+                    incrementStartAndEndPositionsToNextNodes();
+
+                    updateVelocity();
+
+                    isPlatformPositionChecked =false;
+                    startTime = elapsedTime.totalTime;
+                }
+            }
+        }else if (elapsedTime.totalTime-startTime>0.5){ // if 0.5 seconds has elapsed since reaching a node then resume checking the platform position
+            isPlatformPositionChecked = true;
+        }
+    }
+
+
+    @Override
+    public void draw(ElapsedTime elapsedTime, IGraphics2D graphics2D, LayerViewport layerViewport, ScreenViewport screenViewport) {
+
+        // On first run convert the layer coords into screen coords for drawPath
+        // Also generate the path of the platform for debugging, maybe it can be a part of the game
+        // if it doesn't look ugly.
+//        if(first){
+//            screenXScale = (float) screenViewport.width / (2 * layerViewport.halfWidth);
+//            screenYScale = (float) screenViewport.height / (2 * layerViewport.halfHeight);
+//
+//            path.moveTo(movementNodes.get(0).x * screenXScale, screenViewport.height - movementNodes.get(0).y * screenYScale);
+//
+//            for (int i = 1; i < movementNodes.size(); i++) {
+//                path.lineTo(movementNodes.get(i).x * screenXScale, screenViewport.height - movementNodes.get(i).y * screenYScale);
+//            }
+//            path.close();
+//
+//            first = false;
+//        }
+        if (GraphicsHelper.getSourceAndScreenRect(this, layerViewport, screenViewport, drawSourceRect, drawScreenRect)) {
+
+            graphics2D.drawBitmap(mBitmap, platRect, drawScreenRect, null);
+
+            // Draw the debug platform movementPath
+//            graphics2D.drawPath(path, paint);
+
+        }
+    }
+
+    /**
+     * Updates the velocity of the platform which is the vector traveling through the start position and end position
+     */
+    private void updateVelocity(){
+        // Avoid some potential pesky floating point shenanigans, i.e. 1-1=0.00000001
+        // casting to an int should be fine for velocity, it doesn't need precision
+        // Calculate vector from start position to end position
+        // Normalise resulting vector and multiply it by some speed value
+        this.velocity.set((int) (this.endPositionX - this.startPositionX), (int) (this.endPositionY - this.startPositionY));
+        this.velocity.normalise();
+        this.velocity.multiply(speed);
+    }
+
+    /**
+     *  Sets the variables startPosition and endPosition to the next nodes in the movementNode list
+     */
+    private void incrementStartAndEndPositionsToNextNodes(){
+        this.movementNodeCounter++;
+        if (this.movementNodeCounter==this.movementNodes.size()){
+            this.movementNodeCounter = 0;
+        }
+
+        this.startPositionX = this.endPositionX;
+        this.startPositionY = this.endPositionY;
+
+        this.endPositionX = this.movementNodes.get(movementNodeCounter).x;
+        this.endPositionY = this.movementNodes.get(movementNodeCounter).y;
+
+    }
+
+    /**
+     * Get the custom collision box object for the moving platform.
+     * Note: Custom collision Box is <u>1 pixel</u> above platform bounding box.
+     * Intended use is to check if the player on on the platform
+     * @return Custom collision box
+     */
+    public GameObject getCustomCollisionBoxObject(){
+        return customCollisionBox;
+    }
+
+
+}

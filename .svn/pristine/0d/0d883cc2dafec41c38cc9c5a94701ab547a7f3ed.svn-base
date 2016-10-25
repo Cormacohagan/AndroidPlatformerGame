@@ -1,0 +1,20 @@
+package com.gamedev.techtronic.lunargame;
+
+import android.graphics.Bitmap;
+
+/**
+ * Created by Jack on 18-Feb-16.
+ */
+public class HUDBarResourceBundle {
+    public Bitmap background;
+    public Bitmap firstSegment;
+    public Bitmap lastSegment;
+    public Bitmap middleSegment;
+
+    public HUDBarResourceBundle(Bitmap background, Bitmap first, Bitmap segment, Bitmap last) {
+        this.background = background;
+        this.firstSegment = first;
+        this.lastSegment = last;
+        this.middleSegment = segment;
+    }
+}

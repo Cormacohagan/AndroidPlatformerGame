@@ -1,0 +1,627 @@
+package com.gamedev.techtronic.lunargame.Screens;
+
+
+import android.graphics.Color;
+import android.graphics.Paint;
+import android.util.Log;
+
+import com.gamedev.techtronic.lunargame.AI.AStarPathFinder;
+import com.gamedev.techtronic.lunargame.AI.AIUtilities;
+import com.gamedev.techtronic.lunargame.HUDBar;
+import com.gamedev.techtronic.lunargame.Character.NPC;
+import com.gamedev.techtronic.lunargame.Character.Player;
+import com.gamedev.techtronic.lunargame.DialogueBox;
+import com.gamedev.techtronic.lunargame.DialogueTrigger;
+import com.gamedev.techtronic.lunargame.HUD;
+import com.gamedev.techtronic.lunargame.HUDBarResourceBundle;
+import com.gamedev.techtronic.lunargame.HUDUnaryImage;
+import com.gamedev.techtronic.lunargame.Level.Level;
+import com.gamedev.techtronic.lunargame.Tools.LevelTransitionTrigger;
+import com.gamedev.techtronic.lunargame.Trigger;
+import com.gamedev.techtronic.lunargame.gage.Game;
+import com.gamedev.techtronic.lunargame.gage.engine.ElapsedTime;
+import com.gamedev.techtronic.lunargame.gage.engine.graphics.IGraphics2D;
+import com.gamedev.techtronic.lunargame.gage.ui.PushButton;
+import com.gamedev.techtronic.lunargame.gage.util.BoundingBox;
+import com.gamedev.techtronic.lunargame.gage.util.CollisionDetector;
+import com.gamedev.techtronic.lunargame.gage.util.Vector2;
+import com.gamedev.techtronic.lunargame.gage.world.GameScreen;
+import com.gamedev.techtronic.lunargame.gageExtension.FPSCounter;
+import com.gamedev.techtronic.lunargame.gageExtension.ScrollSprite;
+
+import java.util.ArrayList;
+
+
+// The actual playable game. This game screen will be used regardless of what level is loaded in
+
+public class LunarGameScreen extends GameScreen {
+
+    private ArrayList<Vector2> p = new ArrayList<>();
+    private AStarPathFinder pathFinder;
+
+    public enum ScreenState {PLAY, END, PAUSED, DIALOGUE}
+
+    private static ScreenState screenState = ScreenState.PLAY;
+    private Player player;
+    private NPC testNPC;
+    private Level level;
+    private ScrollSprite waterfall;
+    private PushButton leftButton, rightButton, jumpButton;
+    private FPSCounter fpsCounter;
+    private Vector2 playerSpawnPosition;
+    private int xVel, yVel;
+    public float dialogueBoxPositionX, dialogueBoxPositionY, viewportPosX = 240.0F, viewportPosY = 138.0F, viewportZoom;
+    private LevelTransitionTrigger levelTransitionTrigger;
+    private boolean playerStateSound = false, playerConfirmedDead = false,
+            enemyStateSound = true, enemyConfirmedDead = false, dialogueIntroduced = false;
+    private DialogueBox dialogueBox;
+    private DialogueTrigger dialogueTrigger;
+    private Paint textPaint, dialoguePaint, inputPaint;
+    Thread dialogueThread;
+    boolean dThreadStarted = false;
+    
+    private final boolean debug= false;
+    private HUD hud;
+    private HUDBar healthBar;
+    private HUDUnaryImage livesLeft;
+
+    //Default constructor for the game screen
+    public LunarGameScreen(Game game) {
+        super("LunarGameScreen", game);
+
+        this.initViewports(viewportPosX, viewportPosY, 240.0F);
+        super.initAssets();
+        this.addComponents();
+
+        // Experimental!
+        // Check the class for details
+        // Test this out and let me know if you receive the database output in the log
+//        new HighScoreServer().start();
+
+
+        pathFinder = new AStarPathFinder(level);
+    }
+
+    //Initialise all graphical assets used in the game screen
+    protected void initBitmaps() {
+        mAssetManager.loadAndAddBitmap("player", "img/inGame/levels/shared/playerSheet.png");
+        mAssetManager.loadAndAddBitmap("npc", "img/inGame/levels/levelOne/enemyTestSheet.png");
+        mAssetManager.loadAndAddBitmap("background", "img/inGame/levels/levelOne/levelBackground.png");
+        mAssetManager.loadAndAddBitmap("tileSheet", "img/inGame/levels/shared/tileSheet.png");
+        mAssetManager.loadAndAddBitmap("miscSheet", "img/inGame/levels/levelOne/miscSheet.png");
+        mAssetManager.loadAndAddBitmap("waterfallSheet", "img/inGame/levels/levelOne/waterScroll.png");
+        mAssetManager.loadAndAddBitmap("rightArrowButton", "img/inGame/hud/rightArrowButton.png");
+        mAssetManager.loadAndAddBitmap("leftArrowButton", "img/inGame/hud/leftArrowButton.png");
+        mAssetManager.loadAndAddBitmap("rightArrowButtonClick", "img/inGame/hud/rightArrowButtonTouched.png");
+        mAssetManager.loadAndAddBitmap("leftArrowButtonClick", "img/inGame/hud/leftArrowButtonTouched.png");
+        mAssetManager.loadAndAddBitmap("upArrowButton", "img/inGame/hud/upArrowButton.png");
+        mAssetManager.loadAndAddBitmap("upArrowButtonClick", "img/inGame/hud/upArrowButtonTouched.png");
+        mAssetManager.loadAndAddBitmap("dialogueBox", "img/menus/shared/dialogueBox.png");
+        mAssetManager.loadAndAddBitmap("dialogueTrigger", "img/inGame/levels/shared/dialogueTrigger.png");
+        mAssetManager.loadAndAddBitmap("hudHPBackground", "img/inGame/hud/hpBackground.png");
+        mAssetManager.loadAndAddBitmap("hudHPStart", "img/inGame/hud/hpStart.png");
+        mAssetManager.loadAndAddBitmap("hudHPMid", "img/inGame/hud/hpSegment.png");
+        mAssetManager.loadAndAddBitmap("hudHPEnd", "img/inGame/hud/hpEnd.png");
+        mAssetManager.loadAndAddBitmap("lifeIcon", "img/inGame/hud/lifeIcon.png");
+    }
+
+    //Initialise all audio assets used in the game screen
+    protected void initSounds() {
+        mAssetManager.loadAndAddSound("playerDeath", "sfx/inGame/playerDeath.ogg");
+        mAssetManager.loadAndAddSound("respawn", "sfx/inGame/playerRespawn.ogg");
+        mAssetManager.loadAndAddSound("playerZeroLives", "sfx/inGame/playerDeathZeroLives.ogg");
+        mAssetManager.loadAndAddSound("npcDeath", "sfx/inGame/enemyTestDeath.ogg");
+        mAssetManager.loadAndAddSound("dialogueStart", "sfx/inGame/dialogueStart.ogg");
+        mAssetManager.loadAndAddSound("dialogueEnd", "sfx/inGame/dialogueEnd.ogg");
+        mAssetManager.loadAndAddSound("dialogueSpeech1", "sfx/inGame/dialogueSpeech1.ogg");
+        mAssetManager.loadAndAddSound("dialogueSpeech2", "sfx/inGame/dialogueSpeech2.ogg");
+        mAssetManager.loadAndAddSound("dialogueSpeech3", "sfx/inGame/dialogueSpeech3.ogg");
+        mAssetManager.loadAndAddSound("pickUp1", "sfx/inGame/pickUp1.ogg");
+        mAssetManager.getSound("playerDeath").setVolume(0.5f);
+        mAssetManager.getSound("respawn").setVolume(0.5f);
+        mAssetManager.getSound("playerZeroLives").setVolume(0.6f);
+        mAssetManager.getSound("npcDeath").setVolume(0.7f);
+    }
+
+    //Add game objects to the game screen
+    protected void addComponents() {
+
+        // Level class wraps up a lot of loading, updating and drawing of game objects such as moving platforms
+        // bitmap in constructor is just a a null placeholder, it isn't used
+        level = new Level(0, 0, mAssetManager.getBitmap("tileSheet"), this);
+        level.loadLevel("0", this.getGame().getActivity());
+        //level.loadLevel("1", this.getGame().getActivity());
+
+        playerSpawnPosition = new Vector2(level.getPlayerSpawnPosition());
+
+        player = new Player(playerSpawnPosition.x, playerSpawnPosition.y, mAssetManager.getBitmap("player"), this, "player_standing_right", true);
+        testNPC = new NPC(450, 140, mAssetManager.getBitmap("npc"), this, "npc_2_falling", true, 200, 20, "STAND_STILL");
+
+        yVel = (-20);
+        player.velocity.set(0, yVel);
+
+        //dialogueThread = new Thread(dialogueBox);
+        dialogueBoxPositionX =  mLayerViewport.getWidth()/2;
+        dialogueBoxPositionY =  mLayerViewport.getHeight()/3;
+
+        dialogueBox = new DialogueBox(dialogueBoxPositionX, dialogueBoxPositionY, mAssetManager.getBitmap("dialogueBox"), this, "dialogue_box", true, mLayerViewport);
+        dialogueTrigger = new DialogueTrigger(200, 100, 50, 50, mAssetManager.getBitmap("dialogueTrigger"), this, "test_dialogue_1");
+
+        levelTransitionTrigger = new LevelTransitionTrigger("Boss Screen",150,200,50,50,mAssetManager.getBitmap("dialogueTrigger"),this);
+
+
+        // POSITION DEBUG
+        // Create input, being used for debugging, moving player around screen
+//        i = new Input(this.getGame().getActivity(), this.getGame().getView());
+//        layerPos = new Vector2();
+
+        // Uses a Scrolling Sprite, additional method of showing movement, most suited to flowing liquid
+        waterfall = new ScrollSprite(400, 100, 49, 126, mAssetManager.getBitmap("waterfallSheet"), this);
+
+        leftButton = new PushButton(mScreenViewport.left + mScreenViewport.width / 9.2f,
+                mScreenViewport.top + mScreenViewport.height /1.1f, mScreenViewport.width / 10, mScreenViewport.width / 10,
+                "leftArrowButton", "leftArrowButtonClick", this);
+        rightButton = new PushButton(mScreenViewport.left + mScreenViewport.width / 4.6f,
+                mScreenViewport.top + mScreenViewport.height /1.1f, mScreenViewport.width / 10, mScreenViewport.width / 10,
+                "rightArrowButton", "rightArrowButtonClick", this);
+        jumpButton = new PushButton (mScreenViewport.left + mScreenViewport.width / 3.1f,
+                mScreenViewport.top + mScreenViewport.height /1.1f, mScreenViewport.width / 10, mScreenViewport.width / 10,
+                "upArrowButton", "upArrowButtonClick", this);
+
+        // Paint object for putting text onscreen
+        textPaint = new Paint();
+        textPaint.setStyle(Paint.Style.STROKE);
+        textPaint.setColor(Color.GREEN);
+        textPaint.setTextSize(30);
+
+        // Paint object for input buttons
+        inputPaint = new Paint();
+        inputPaint.setAlpha(170);
+
+        // Paint object for black background in dialogue state
+        dialoguePaint = new Paint();
+        dialoguePaint.setColor(Color.argb(220, 0, 0, 0));
+        dialoguePaint.setStyle(Paint.Style.FILL);
+
+        fpsCounter = new FPSCounter(mScreenViewport.width - 160, 35, 30, this.mGame);
+        //fpsCounter = new FPSCounter(mScreenViewport.width - mScreenViewport.width / 12, mScreenViewport.width - mScreenViewport.width / 12, 25, mGame);
+
+        this.initHUD();
+    }
+
+    private void initHUD() {
+        this.hud = new HUD(0, 0, false);
+
+        HUDBarResourceBundle hpBarResources = new HUDBarResourceBundle(mAssetManager.getBitmap("hudHPBackground"), mAssetManager.getBitmap("hudHPStart"), mAssetManager.getBitmap("hudHPMid"),mAssetManager.getBitmap("hudHPEnd"));
+        this.healthBar = new HUDBar("Health", mScreenViewport.left + 20, mScreenViewport.top + 20, hpBarResources, 0, 100, 100, this);
+
+        this.livesLeft = new HUDUnaryImage("Lives", mScreenViewport.left + 240, mScreenViewport.top + 20, this.mAssetManager.getBitmap("lifeIcon"), 1, this);
+
+        this.hud.addHUDComponent(this.healthBar);
+        this.hud.addHUDComponent(this.livesLeft);
+    }
+
+    // updates state of the game screen & handles user input
+    @Override
+    public void update(ElapsedTime elapsedTime) {
+        /*
+        Check if the play has run out of lives,
+        if so, transition to the menu screen after a set time
+         */
+        player.isJumping = true;
+
+        if (player.livesLeft == 0) {
+            gameOverTransition(5000);
+        }
+
+        /*
+        Check if the player has died and take appropriate action
+         */
+        if (!playerConfirmedDead) {
+            if (player.isDead()) {
+                screenState = ScreenState.END;
+                player.livesLeft -= 1;
+                playerConfirmedDead = true;
+                playerStateSound = true;
+            }
+        }
+
+        /*
+        Check if the enemy has died and take appropriate action
+         */
+        if (!enemyConfirmedDead) {
+            if (testNPC.isDead()) {
+                testNPC.setAnimation("npc_2_death", false);
+                enemyConfirmedDead = true;
+            }
+        }
+
+        if (screenState == ScreenState.END) { // if game is in GAME OVER state..
+            resolveEndState();
+        }
+        else if (screenState == ScreenState.PLAY) { // If game is currently running (not paused, in a gameover state or in a cut scene)
+
+            player.velocity.set(0, player.velocity.y);
+
+            if (playerStateSound) {
+                mAssetManager.getSound("respawn").play();
+                playerStateSound = false;
+            }
+
+
+            resolveTouchEvents();
+
+            // Important to resolve any collisions with platform bounding box before checking if the player is on a platform
+            CollisionDetector.determineAndResolveCollision(player.customCollisionBox, level.getMovingPlatformList().get(0));
+            CollisionDetector.determineAndResolveCollision(testNPC.customCollisionBox, level.getMovingPlatformList().get(0));
+
+            player.update(elapsedTime);
+            testNPC.update(elapsedTime);
+            level.update(elapsedTime);
+            waterfall.update(elapsedTime);
+            leftButton.update(elapsedTime);
+            rightButton.update(elapsedTime);
+            jumpButton.update(elapsedTime);
+            dialogueTrigger.update(elapsedTime);
+
+
+            // Detect if player is on platform, if so match player velocity to platform
+            if (CollisionDetector.isCollision(player.customCollisionBox.getBound(), level.getMovingPlatformList().get(0).customCollisionBox.getBound())) {
+                if (CollisionDetector.determineCollisionType(player.customCollisionBox.getBound(), level.getMovingPlatformList().get(0).customCollisionBox.getBound())== CollisionDetector.CollisionType.Top);
+                {
+                    player.velocity.set(level.getMovingPlatformList().get(0).velocity);
+                }
+                player.isJumping = false;
+                player.canJump = true;
+                player.velocity.y = -30;
+            }
+
+            // same as above, but for npc
+            if (CollisionDetector.isCollision(testNPC.customCollisionBox.getBound(), level.getMovingPlatformList().get(0).customCollisionBox.getBound())) {
+                testNPC.velocity.set(level.getMovingPlatformList().get(0).velocity);
+            } else {
+                testNPC.velocity.set(0, -30);
+            }
+
+            // collision detection for dialogue trigger with player
+            if (CollisionDetector.isCollision(player.customCollisionBox.getBound(), dialogueTrigger.getBound())) {
+                dialogueTrigger.setPosition(-500, -500);
+                screenState = ScreenState.DIALOGUE;
+            }
+
+            // Collision detection for the level ending trigger with player
+            if (CollisionDetector.isCollision(player.customCollisionBox.getBound(), levelTransitionTrigger.getBound())) {
+                levelTransitionTrigger.setPosition(-500, -500);
+                levelTransitionTrigger.execute();
+            }
+
+            // collision detection for score pickups
+            for (int i = 0; i < level.getPickUpList().size(); i++ ) {
+                if (CollisionDetector.isCollision(player.customCollisionBox.getBound(), level.getPickUpList().get(i).getBound())) {
+                    player.addScore(level.getPickUpList().get(i).getScoreValue());
+                    mAssetManager.getSound("pickUp1").play();
+                    Log.d("Pickup Debug", "Pickup number " + i + " in arraylist collected");
+                    level.getPickUpList().remove(i);
+                }
+            }
+
+
+            // Check if tiles which have collision are touching player, then resolve
+            // This is a little bit more complicated now due to tile and animated tile being present
+            for (int i = 0; i < level.getCollidableTileList().size(); i++) {
+
+                if (level.getCollidableTileList().get(i).isDamaging()) {
+                    if (CollisionDetector.isCollision(player.customCollisionBox.getBound(), level.getCollidableTileList().get(i).getBound())) {
+                        player.takeDamage(player.health);
+                    } else if (CollisionDetector.isCollision(testNPC.getBound(), level.getCollidableTileList().get(i).getBound())) {
+                        testNPC.takeDamage(testNPC.health);
+                        if (enemyStateSound) {
+                            mAssetManager.getSound("npcDeath").play();
+                            enemyStateSound = false;
+                        }
+
+                    }
+                }
+                if (level.getCollidableTileList().get(i).isCollidable()){
+                    if (CollisionDetector.isCollision(player.customCollisionBox.getBound(), level.getCollidableTileList().get(i).getBound())) {
+                        if (player.mCurrentAnimation.name.contains("right")){
+                            player.setAnimation("player_standing_right",true);
+                        }else if (player.mCurrentAnimation.name.contains("left")){
+                            player.setAnimation("player_standing_left",true);
+                        }
+                        if (CollisionDetector.determineCollisionType(player.customCollisionBox.getBound(), level.getCollidableTileList().get(i).getBound()) == CollisionDetector.CollisionType.Top) {
+                           player.velocity.y = -1;
+                            player.isJumping = false;
+                            player.canJump = true;
+                        } else if (CollisionDetector.determineCollisionType(player.customCollisionBox.getBound(), level.getCollidableTileList().get(i).getBound()) == CollisionDetector.CollisionType.Bottom) {
+                            player.velocity.y = -50;
+                            player.isJumping = true;
+                            player.canJump = false;
+                        } else if (CollisionDetector.determineCollisionType(player.customCollisionBox.getBound(), level.getCollidableTileList().get(i).getBound()) == CollisionDetector.CollisionType.Left) {
+                            player.velocity.y = -50;
+                            player.isJumping = true;
+                            player.canJump = false;
+                        } else if (CollisionDetector.determineCollisionType(player.customCollisionBox.getBound(), level.getCollidableTileList().get(i).getBound()) == CollisionDetector.CollisionType.Right) {
+                            player.velocity.y = -50;
+                            player.isJumping = true;
+                            player.canJump = false;
+                        } else{
+                            player.velocity.y = -50;
+                            player.isJumping = true;
+                            player.canJump = false;
+                        }
+                    }
+                }
+
+                CollisionDetector.determineAndResolveCollision(player.customCollisionBox, level.getCollidableTileList().get(i));
+                CollisionDetector.determineAndResolveCollision(testNPC.customCollisionBox, level.getCollidableTileList().get(i));
+
+            }
+
+            updateLayerViewport();
+        }
+        else if (screenState == ScreenState.DIALOGUE) {
+
+            //int fade = 0;
+
+    /*        while(!dialogueIntroduced) {
+
+                dialoguePaint.setColor(Color.argb(fade, 0, 0, 0));
+                try {
+                    Thread.currentThread().sleep(50);
+                }
+                catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                fade++;
+
+                if (fade >= 220) {
+                    dialogueIntroduced = true;
+                }
+            }*/
+
+
+
+            if (!dThreadStarted) {
+                mAssetManager.getSound("dialogueStart").play();
+                dialogueBox.activateDialogueBox(dialogueTrigger.getDialogueID());
+                dialogueThread = new Thread(dialogueBox);
+                dialogueThread.start();
+                dThreadStarted = true;
+            }
+
+            dialogueBox.update(elapsedTime);
+            fpsCounter.update(elapsedTime);
+
+        }
+        pathFinder.setStartPosition(new Vector2(Math.round(player.position.x / 16), Math.round(player.position.y / 16)));
+        pathFinder.setGoalPosition(new Vector2(Math.round(testNPC.position.x / 16), Math.round(testNPC.position.y / 16)));
+
+
+        this.healthBar.update(elapsedTime, this.player.health);
+        this.livesLeft.update(elapsedTime, this.player.livesLeft);
+
+        if (debug) {
+            pathFinder.run();
+        }
+    }
+
+    protected void resolveTouchEvents() {
+        if (leftButton.isPushed()) {
+            xVel = (-50);
+            player.velocity.x = xVel;
+            player.setAnimation("player_walking_left", true);
+        } else if (rightButton.isPushed()) {
+            xVel = (50);
+            player.velocity.x = xVel;
+            player.setAnimation("player_walking_right", true);
+
+
+        } else if (jumpButton.pushTriggered()){
+
+
+
+            if (player.canJump) {
+                if (player.mCurrentAnimation.name.contains("left")) {
+                    player.setAnimation("player_jump_left", true);
+                }
+                else if(player.mCurrentAnimation.name.contains("right")) {
+                    player.setAnimation("player_jump_right", true);
+                }
+
+                player.canJump = false;
+                player.isJumping = true;
+                player.velocity.y = 50;
+            }
+        }
+    }
+
+    protected void resolveEndState() {
+        if (playerStateSound) { // if death sound hasn't been played yet.. play death sound
+            if (player.livesLeft > 0) {
+                mAssetManager.getSound("playerDeath").play();
+            } else {
+                mAssetManager.getSound("playerZeroLives").play();
+            }
+            playerStateSound = false; // (stops sound getting played each update() call)
+        }
+        if (player.livesLeft > 0) {
+            spawnPlayer();
+        }
+    }
+
+    protected void spawnPlayer() {
+        player.setPosition(playerSpawnPosition.x, playerSpawnPosition.y);
+
+        screenState = ScreenState.PLAY;
+        player.health = 100;
+        playerConfirmedDead = false;
+        playerStateSound = true;
+    }
+
+    protected void gameOverTransition(final int sleepTime) {
+        Runnable gameOverTransition = new Runnable() {
+            public void run() {
+                try {
+                    Thread.sleep(sleepTime);
+                    mGame.getScreenManager().removeScreen(LunarGameScreen.this.mName);
+                    mGame.getScreenManager().addScreen(new LunarMenuScreen(mGame));
+                    mGame.getScreenManager().setAsCurrentScreen("LunarMenuScreen");
+                    System.gc();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        };
+        (new Thread(gameOverTransition)).run();
+    }
+
+    // renders the most recent state of the game screen that's available
+    @Override
+    public void draw(ElapsedTime elapsedTime, IGraphics2D graphics2D) {
+        graphics2D.clear(Color.BLACK);
+        graphics2D.clipRect(mScreenViewport.toRect());
+
+        if (screenState == ScreenState.END) {
+
+            elapsedTime.stepTime = 0;
+        }
+
+        // Draw all the things!
+
+        level.draw(elapsedTime, graphics2D, mLayerViewport, mScreenViewport);
+        player.draw(elapsedTime, graphics2D, mLayerViewport, mScreenViewport);
+        testNPC.draw(elapsedTime, graphics2D, mLayerViewport, mScreenViewport);
+        waterfall.draw(elapsedTime, graphics2D, mLayerViewport, mScreenViewport);
+        leftButton.draw(elapsedTime, graphics2D, mLayerViewport, mScreenViewport, inputPaint);
+        rightButton.draw(elapsedTime, graphics2D, mLayerViewport, mScreenViewport, inputPaint);
+        jumpButton.draw(elapsedTime, graphics2D, mLayerViewport, mScreenViewport, inputPaint);
+        dialogueTrigger.draw(elapsedTime, graphics2D, mLayerViewport, mScreenViewport);
+        levelTransitionTrigger.draw(elapsedTime,graphics2D,mLayerViewport,mScreenViewport);
+
+        fpsCounter.draw(elapsedTime, graphics2D, mLayerViewport, mScreenViewport);
+
+        graphics2D.drawText("Health: " + String.valueOf(player.health), 50, 35, textPaint);
+        graphics2D.drawText("Lives left: " + String.valueOf(player.livesLeft), 280, 35, textPaint);
+
+        if (screenState == ScreenState.END) {
+            textPaint.setColor(Color.argb(220, 0, 0, 0));
+            textPaint.setStyle(Paint.Style.FILL);
+            graphics2D.drawRect(mScreenViewport.left, mScreenViewport.top, mScreenViewport.right, mScreenViewport.bottom, textPaint);
+
+            textPaint.setColor(Color.argb(255, 0, 255, 0));
+            graphics2D.drawText("GAME OVER", mScreenViewport.centerX() - mScreenViewport.width/12, mScreenViewport.centerY(), textPaint);
+
+            if (player.livesLeft >0) {
+                graphics2D.drawText("TOUCH SCREEN TO CONTINUE", mScreenViewport.centerX() - mScreenViewport.width / 6,
+                        mScreenViewport.centerY() + mScreenViewport.height / 10, textPaint);
+            }
+        }
+        else if (screenState == ScreenState.DIALOGUE) {
+
+            graphics2D.drawRect(mScreenViewport.left, mScreenViewport.top, mScreenViewport.right, mScreenViewport.bottom, dialoguePaint);
+            dialogueBox.draw(elapsedTime, graphics2D, mLayerViewport, mScreenViewport);
+        }
+
+        // Draws FPS counter and a shadow to improve readability
+
+        fpsCounter.draw(elapsedTime, graphics2D, mLayerViewport, mScreenViewport);
+
+        graphics2D.drawText("Health: " + String.valueOf(player.health), 50, 35, textPaint);
+        graphics2D.drawText("Lives left: " + String.valueOf(player.livesLeft), 280, 35, textPaint);
+        graphics2D.drawText("Score: " + String.valueOf(player.score), 680, 35, textPaint);
+
+        if (debug){
+            // Pathfinder debug
+            drawDebugLevelGraph(graphics2D, p);
+        }
+
+        this.hud.draw(elapsedTime, graphics2D, mLayerViewport, mScreenViewport);
+    }
+
+    /**CE:
+     * Draws the navigation grid for pathfinding onscreen for navigation.
+     *
+     * @param graphics2D
+     */
+    private void drawDebugLevelGraph(IGraphics2D graphics2D, ArrayList<Vector2> path) {
+
+
+        // CE:
+        // Could be rewritten, if you're brave enough to figure out how to convert from layer coords into screen coords for drawing lines properly
+        // But hey it's only debug!
+
+        Paint cusPaint = new Paint();
+        cusPaint.setColor(Color.RED);
+        float screenXScale = (float) mScreenViewport.width / (2 * mLayerViewport.halfWidth);
+        float screenYScale = (float) mScreenViewport.height / (2 * mLayerViewport.halfHeight);
+
+        // Draw the graph for the level
+//        for (int i = 0; i < nodes.length; i++) {
+//                for (int j = 0; j < nodes[0].length; j++) {
+//                    for (Connection c: nodes[i][j].getConnections()){
+//
+//                        tempPosVec.set(c.getFromNode().getX(), 217-c.getFromNode().getY());
+//                        tempPosVec2.set(c.getToNode().getX(), 217-c.getToNode().getY());
+//
+//                        graphics2D.drawLine(
+//                                (tempPosVec.x * screenXScale) - (mLayerViewport.x * screenXScale)+ (mScreenViewport.width/2),
+//                                ((tempPosVec.y * screenYScale) + (mLayerViewport.y * screenYScale) - (mScreenViewport.height/2) + (60*screenYScale)),
+//                                (tempPosVec2.x * screenXScale) - (mLayerViewport.x * screenXScale)+ (mScreenViewport.width/2),
+//                                ((tempPosVec2.y * screenYScale) + (mLayerViewport.y * screenYScale)- (mScreenViewport.height/2) + (60*screenYScale)),
+//                                textPaint);
+//                    }
+//                }
+//        }
+
+        path = pathFinder.getPath();
+
+        for (int i = 0; i < path.size()-1; i++) {
+            graphics2D.drawLine(
+                    (path.get(i).x * screenXScale) - (mLayerViewport.x * screenXScale) + (mScreenViewport.width / 2),
+                    (((217 - path.get(i).y) * screenYScale) + (mLayerViewport.y * screenYScale) - (mScreenViewport.height / 2) + (60 * screenYScale)),
+                    (path.get(i + 1).x * screenXScale) - (mLayerViewport.x * screenXScale) + (mScreenViewport.width / 2),
+                    (((217 - path.get(i + 1).y) * screenYScale) + (mLayerViewport.y * screenYScale) - (mScreenViewport.height / 2) + (60 * screenYScale)),
+                    textPaint);
+        }
+        path = AIUtilities.smoothPath(pathFinder.getPath(), level.getCollidableTileList());
+
+        for (int i = 0; i < path.size()-1; i++) {
+            graphics2D.drawLine(
+                    (path.get(i).x * screenXScale) - (mLayerViewport.x * screenXScale) + (mScreenViewport.width / 2),
+                    (((217 - path.get(i).y) * screenYScale) + (mLayerViewport.y * screenYScale) - (mScreenViewport.height / 2) + (60 * screenYScale)),
+                    (path.get(i + 1).x * screenXScale) - (mLayerViewport.x * screenXScale) + (mScreenViewport.width / 2),
+                    (((217 - path.get(i + 1).y) * screenYScale) + (mLayerViewport.y * screenYScale) - (mScreenViewport.height / 2) + (60 * screenYScale)),
+                    cusPaint);
+        }
+
+
+    }
+
+    public static void setScreenState(ScreenState state) {
+        screenState = state;
+    }
+
+    // updates viewport position based on player position (so the player doesn't disappear off-screen
+    private void updateLayerViewport() {
+        BoundingBox playerBox = player.getBound();
+        // if player's x pos is 66% or greater than layerviewport.right, shift layerviewport
+        if (playerBox.getLeft() <= mLayerViewport.getLeft()+(mLayerViewport.getWidth()/2.3)) {
+            viewportPosX-=1;
+        }
+        else if(playerBox.getRight() >= mLayerViewport.getRight() -(mLayerViewport.getWidth()/2.3)) {
+            viewportPosX+=1;
+        }
+
+        if(playerBox.getTop() >= mLayerViewport.getTop() - (mLayerViewport.getHeight()/3)) {
+            viewportPosY+=1;
+        }
+        else if(playerBox.getBottom() <= mLayerViewport.getBottom() + (mLayerViewport.getHeight()/3)) {
+            viewportPosY-=1;
+
+        }
+
+        mLayerViewport.setX(viewportPosX);
+        mLayerViewport.setY(viewportPosY);
+    }
+}

@@ -1,0 +1,64 @@
+package com.gamedev.techtronic.lunargame.AI;
+
+import com.gamedev.techtronic.lunargame.Level.Level;
+
+public class Graph {
+
+    private final Node[][] nodeArray;
+
+    public Graph(Level level) {
+
+        nodeArray = new Node[level.getLevelTileArray().length][level.getLevelTileArray()[0].length];
+
+        // Read the tile data into the node array
+        for (int x = 0; x < nodeArray.length; x++) {
+            for (int y = 0; y < nodeArray[0].length; y++) {
+                nodeArray[x][y] = new Node((int)level.getLevelTileArray()[x][y].position.x, (int)level.getLevelTileArray()[x][y].position.y, level.getLevelTileArray()[x][y].isCollidable());
+            }
+        }
+
+        for (int x = 0; x < nodeArray.length; x++) {
+            for (int y = 0; y < nodeArray[0].length; y++) {
+
+                // A blocked tile can't be a node
+                if (nodeArray[x][y].isBlocked()){continue;}
+
+                // Validation, no less than 0 values, out of bounds
+                // Maximum of 4 connections, up/down/left/right, all equal cost
+                if ( !(y-1<0)){
+                    if (!(nodeArray[x][y-1].isBlocked())){
+                        //Get node above current node
+                        nodeArray[x][y].addConnection(new Connection(nodeArray[x][y], nodeArray[x][y-1]));
+                    }
+
+                }
+                if (!(y+1>= nodeArray[0].length) ){
+                    if (!(nodeArray[x][y+1].isBlocked())){
+                        //Get node below current node
+                        nodeArray[x][y].addConnection(new Connection(nodeArray[x][y], nodeArray[x][y+1]));
+                    }
+
+                }
+                if (!(x-1<0)){
+                    if (!(nodeArray[x-1][y].isBlocked())){
+                        //Get node to the left of current node
+                        nodeArray[x][y].addConnection(new Connection(nodeArray[x][y], nodeArray[x-1][y]));
+                    }
+
+                }
+                if (!(x+1>= nodeArray.length)){
+                    if (!(nodeArray[x+1][y].isBlocked())){
+                        //Get node to the right of current node
+                        nodeArray[x][y].addConnection(new Connection(nodeArray[x][y], nodeArray[x+1][y]));
+                    }
+
+                }
+            }
+        }
+    }
+
+    public Node[][] getNodeArray() {
+        return nodeArray;
+    }
+
+}

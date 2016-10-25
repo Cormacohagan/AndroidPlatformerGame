@@ -1,0 +1,109 @@
+package com.gamedev.techtronic.lunargame.Character;
+
+import android.graphics.Bitmap;
+
+import com.gamedev.techtronic.lunargame.gage.engine.ElapsedTime;
+import com.gamedev.techtronic.lunargame.gage.world.GameScreen;
+
+import java.lang.*;
+
+public class NPC extends Character {
+
+    // private enum BehaviourType {DEFAULT, COWARDLY, AGGRESSIVE}
+    //private enum State {STAND_STILL, SCARED, WANDER, ATTACK, FOLLOW, RUNAWAY, DEAD}
+   // private State state = State.STAND_STILL;
+   // private BehaviourType behaviour = BehaviourType.DEFAULT;
+    private enum State {STAND_STILL, WANDER, SCARED, HAPPY, HOSTILE, DEAD} // allows us to vary an NPC's behaviour easily
+    private State state;
+
+
+    public NPC(float x, float y, Bitmap bitmap, GameScreen gameScreen, String animationName,
+               Boolean isLooping, int health, int damage, String behaviour) {
+        super(x, y, bitmap, gameScreen, animationName, isLooping);
+        this.health = health;
+        this.damage = damage;
+        state = State.valueOf(behaviour);
+    }
+
+    public NPC(float x, float y, Bitmap bitmap, GameScreen gameScreen, String animationName, Boolean isLooping) {
+        super(x, y, bitmap, gameScreen, animationName, isLooping);
+    }
+
+    // NPC acts according to it's behavioural state.
+    // These are default implementations, subclasses can implement their own versions of the methods
+    // E.g. a projectileEnemy will attack() differently than a meleeEnemy
+    public void update(ElapsedTime elapsedTime) {
+
+        super.update(elapsedTime);
+
+        if (state == State.STAND_STILL) {
+
+           // CE: StepAnimation is now a private method, update directly handles stepping the animation
+           //this.stepAnimation(elapsedTime);
+        }
+        else if (state == State.WANDER) {
+            // Non-hostile NPCs could take steps back and forth slowly with pauses
+            // Hostile NPCs by default should aggressively patrol with little/no pauses
+
+
+        }
+        else if (state == State.DEAD) {
+            // display non-looping death animation and don't resolve collisions with player
+        }
+        else if (state == State.SCARED) {
+            // change NPC's animations to "scared" set
+            // attempt to runAway() from player
+        }
+        else if (state == State.HOSTILE) {
+            // attack()
+        }
+    }
+
+    // called when NPC is hostile and wants to deal damage to player
+    public void attack() {
+        // if player is relatively close to NPC
+            // if moving towards player position without jumping is possible
+                // moveLeft() / moveRight() call
+        // if NPC at end of terrain
+                // attemptToJump() (towards player)
+    }
+
+    // called when player is afraid
+    public void runAway() {
+        // call isPlayerNear()
+        // if true,
+            // get player position and travel in the opposite direction
+            // if come to end of terrain, checkSafeToJump or travel back where NPC came from
+             // if come to a wall, travel back where NPC came from or "bounce" off it trying to escape
+            // play distress sound byte
+    }
+
+    public boolean isPlayerNear(int distanceNPCReacts) {
+        // if player is [distanceNPCReacts] away from player, return true
+        return false;
+    }
+
+    // used when NPC gives player an item, or when enemy is killed and drops an item / powerup
+    public void spawnItem(String itemName) {
+
+        // instantiate a new object according to itemName
+        // place it at NPC's location
+        // give it an upwards & to either side velocity
+
+    }
+
+    // check if the NPC can make the jump when it reaches the end of terrain.
+    public void attemptToJump() {
+        // measure how far other terrain bounding boxes are away from current NPC x-pos (excluding the one NPC is touching)
+        // compare the jump height of the NPC to how high / low the terrain is in relation to NPC y-pos
+        // if NPC can reach, math.random() if itll decide to jump
+        // if NPC wants to jump, call Character.jump() and move (along x-axis) towards the direction of the terrain
+
+    }
+
+    // used to change some NPC's states to normal to afraid
+    public void detectDanger() {
+        // if bullets // enemies in the area, set state to SCARED
+    }
+
+}

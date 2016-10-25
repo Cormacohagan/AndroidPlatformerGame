@@ -1,0 +1,37 @@
+package com.gamedev.techtronic.lunargame.Level.Entities;
+
+import android.graphics.Bitmap;
+import android.graphics.Color;
+import android.graphics.Paint;
+import android.graphics.Rect;
+
+import com.gamedev.techtronic.lunargame.gage.engine.ElapsedTime;
+import com.gamedev.techtronic.lunargame.gage.engine.graphics.IGraphics2D;
+import com.gamedev.techtronic.lunargame.gage.world.GameObject;
+import com.gamedev.techtronic.lunargame.gage.world.GameScreen;
+import com.gamedev.techtronic.lunargame.gage.world.LayerViewport;
+import com.gamedev.techtronic.lunargame.gage.world.ScreenViewport;
+import com.gamedev.techtronic.lunargame.gageExtension.AnimatedSprite;
+
+public class Projectile extends AnimatedSprite {
+
+    public GameObject customCollisionBox;
+
+    public Projectile(float x, float y, Bitmap bitmap, GameScreen gameScreen, String animationName, Boolean isLooping) {
+        super(x, y, bitmap, gameScreen, animationName, isLooping);
+
+        customCollisionBox = new GameObject(x, y, gameScreen.getGame().getAssetManager().getBitmap("playerBullet"), gameScreen);
+        customCollisionBox.getBound().halfWidth= (this.mCurrentAnimation.getSpriteWidth()/2);
+        customCollisionBox.getBound().halfHeight= this.mCurrentAnimation.getSpriteHeight()/2;
+
+    }
+
+    public void update(ElapsedTime elapsedTime) {
+
+        this.position.x = customCollisionBox.position.x;
+        this.position.y = customCollisionBox.position.y;
+        super.update(elapsedTime);
+        customCollisionBox.position.x = this.position.x;
+        customCollisionBox.position.y = this.position.y;
+    }
+}

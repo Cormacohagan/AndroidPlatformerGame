@@ -1,0 +1,25 @@
+package com.gamedev.techtronic.lunargame.AI;
+
+public class Connection {
+
+    private int cost=1;
+    private Node fromNode;
+    private Node toNode;
+
+    public Connection(Node fromNode, Node toNode) {
+        this.fromNode = fromNode;
+        this.toNode = toNode;
+    }
+
+    public int getCost(){
+        return cost;
+    }
+
+    public Node getFromNode(){
+        return fromNode;
+    }
+
+    public Node getToNode(){
+        return toNode;
+    }
+}

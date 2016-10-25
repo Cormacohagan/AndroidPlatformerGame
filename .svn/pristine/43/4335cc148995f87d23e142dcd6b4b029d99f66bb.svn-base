@@ -1,0 +1,59 @@
+package com.gamedev.techtronic.lunargame.Character;
+
+import android.graphics.Bitmap;
+
+import com.gamedev.techtronic.lunargame.gage.world.GameObject;
+import com.gamedev.techtronic.lunargame.gage.world.GameScreen;
+
+import java.lang.*;
+
+public class Player extends Character {
+
+    private int maxHealthValue, maxDamageValue;
+    public int livesLeft;
+
+    public Player(float x, float y, Bitmap bitmap, GameScreen gameScreen, String animationName, Boolean isLooping) {
+        super(x, y, bitmap, gameScreen, animationName, isLooping);
+
+        // Player bitmap used as a null place holder, it doesn't get drawn
+//        customCollisionBox = new GameObject(x, y, gameScreen.getGame().getAssetManager().getBitmap(null), gameScreen);
+
+        // CE's code. player is 2 pixels narrower on each side than the animation depicts
+        customCollisionBox.getBound().halfWidth= (this.mCurrentAnimation.getSpriteWidth()/2)-4;
+        customCollisionBox.getBound().halfHeight= this.mCurrentAnimation.getSpriteHeight()/2;
+
+        maxHealthValue = 100; // starting off values
+        maxDamageValue = 50;
+        livesLeft = 1;
+
+        health = maxHealthValue;
+        damage = maxDamageValue;
+
+    }
+
+    // used when player gets a powerup / reward that increases their max HP
+    public void upgradeHealth(int upgradeAmount) {
+        maxHealthValue += upgradeAmount;
+    }
+
+    public void upgradeDamage(int upgradeAmount) {
+        maxDamageValue += upgradeAmount;
+    }
+
+    public void setLivesLeft(int amountToModifyBy) {
+        livesLeft += amountToModifyBy;
+    }
+
+    public String getMaxHealthValue() {
+        return String.valueOf(maxHealthValue);
+    }
+
+
+    public String getMaxDamageValue() {
+        return String.valueOf(maxDamageValue);
+    }
+
+    // Update player position
+
+
+}

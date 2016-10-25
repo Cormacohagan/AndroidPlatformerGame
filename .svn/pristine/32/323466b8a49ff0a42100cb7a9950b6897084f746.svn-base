@@ -1,0 +1,18 @@
+﻿Collision detection:
+- Player now slides off of the moving platform when they should be stationary (in relation to the platform)
+- If player stand still on moving platform, and waits for it to move away from under their feet,
+    the game still treats the player as if they're on solid ground, and they can now walk on the air
+- If player jumps and:  is touching a tile to his left or right
+                        has no vertical momentum (such as at the arc of his jump)..
+    ..the player can jump again (like a buggy walljump)
+- If the moving platform comes down on top of the player's head, it forces them down through the tile they're standing on
+
+Main menu:
+- Push button images are stretched vertically & only the bottom half of the button can be clicked (due to the stretching)
+
+Game world:
+- When the player loses all of their HP due to a hazard, they die repeatedly and lose all of their lives
+- No way to restart game after a death
+
+Player:
+- Animations are buggy: If the player jumps and turns left or right, they'll start their grounded running animation

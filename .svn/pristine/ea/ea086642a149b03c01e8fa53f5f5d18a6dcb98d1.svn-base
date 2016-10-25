@@ -1,0 +1,229 @@
+package com.gamedev.techtronic.lunargame.gage.util;
+
+import com.gamedev.techtronic.lunargame.gage.Game;
+import com.gamedev.techtronic.lunargame.gage.world.GameObject;
+import com.gamedev.techtronic.lunargame.gage.world.LayerViewport;
+import com.gamedev.techtronic.lunargame.gage.world.ScreenViewport;
+import android.graphics.Bitmap;
+import android.graphics.Rect;
+
+public final class GraphicsHelper {
+	
+	// /////////////////////////////////////////////////////////////////////////
+	// Source and Desintation Rects
+	// /////////////////////////////////////////////////////////////////////////
+		
+	/** 
+	 * Determine the full source bitmap Rect and destination screen Rect if the
+	 * specified game object bound falls within the layer's viewport.
+	 * 
+	 * The return rects are not clipped against the screen viewport.
+	 * 
+	 * @param gameObject
+	 *            Game object instance to be considered
+	 * @param layerViewport
+	 *            Layer viewport region to check the entity against
+	 * @param screenViewport
+	 *            Screen viewport region that will be used to draw the
+	 * @param sourceRect
+	 *            Output Rect holding the region of the bitmap to draw
+	 * @param screenRect
+	 *            Output Rect holding the region of the screen to draw to
+	 * @return boolean true if the entity is visible, false otherwise
+	 * @return
+	 */
+	public static final boolean getSourceAndScreenRect(GameObject gameObject,
+			LayerViewport layerViewport, ScreenViewport screenViewport,
+			Rect sourceRect, Rect screenRect) {
+
+		// Get the bounding box for the specified sprite
+		BoundingBox spriteBound = gameObject.getBound();
+
+		// Determine if the sprite falls within the layer viewport
+		if (spriteBound.x - spriteBound.halfWidth < layerViewport.x + layerViewport.halfWidth && 
+			spriteBound.x + spriteBound.halfWidth > layerViewport.x - layerViewport.halfWidth && 
+			spriteBound.y - spriteBound.halfHeight < layerViewport.y + layerViewport.halfHeight && 
+			spriteBound.y + spriteBound.halfHeight > layerViewport.y - layerViewport.halfHeight) {
+
+			// Define the source rectangle
+			Bitmap spriteBitmap = gameObject.getBitmap();
+			sourceRect.set(0, 0, spriteBitmap.getWidth(), spriteBitmap.getHeight());
+
+			// Determine the x- and y-aspect rations between the layer and screen viewports
+			float screenXScale = (float) screenViewport.width / (2 * layerViewport.halfWidth);
+			float screenYScale = (float) screenViewport.height / (2 * layerViewport.halfHeight);
+
+			// Determine the screen rectangle
+			float screenX = screenViewport.left + screenXScale * 					
+							((spriteBound.x - spriteBound.halfWidth) 
+									- (layerViewport.x - layerViewport.halfWidth));
+			float screenY = screenViewport.top + screenYScale * 
+							((layerViewport.y + layerViewport.halfHeight) 
+									- (spriteBound.y + spriteBound.halfHeight));
+
+			screenRect.set((int) screenX, (int) screenY,
+					(int) (screenX + (spriteBound.halfWidth * 2) * screenXScale),
+					(int) (screenY + (spriteBound.halfHeight * 2) * screenYScale));
+
+			return true;
+		}
+
+		// Not visible
+		return false;
+	}
+	
+	
+	/** 
+	 * Determine a source bitmap Rect and destination screen Rect if the
+	 * specified game object bound falls within the layer's viewport.
+	 * 
+	 * The returned Rects are clipped against the layer and screen viewport
+	 * 
+	 * @param gameObject
+	 *            Game object instance to be considered
+	 * @param layerViewport
+	 *            Layer viewport region to check the entity against
+	 * @param screenViewport
+	 *            Screen viewport region that will be used to draw the
+	 * @param sourceRect
+	 *            Output Rect holding the region of the bitmap to draw
+	 * @param screenRect
+	 *            Output Rect holding the region of the screen to draw to
+	 * @return boolean true if the entity is visible, false otherwise
+	 */
+	public static final boolean getClippedSourceAndScreenRect(GameObject gameObject,
+			LayerViewport layerViewport, ScreenViewport screenViewport,
+			Rect sourceRect, Rect screenRect) {
+
+		// Get the bounding box for the specified sprite
+		BoundingBox spriteBound = gameObject.getBound();
+
+		// Determine if the sprite falls within the layer viewport
+		if (spriteBound.x - spriteBound.halfWidth < layerViewport.x + layerViewport.halfWidth && 
+			spriteBound.x + spriteBound.halfWidth > layerViewport.x - layerViewport.halfWidth && 
+			spriteBound.y - spriteBound.halfHeight < layerViewport.y + layerViewport.halfHeight && 
+			spriteBound.y + spriteBound.halfHeight > layerViewport.y - layerViewport.halfHeight) {
+
+			// Work out what region of the sprite is visible within the layer viewport,
+
+			float sourceX = Math.max(0.0f,
+					(layerViewport.x - layerViewport.halfWidth)
+							- (spriteBound.x - spriteBound.halfWidth));
+			float sourceY = Math.max(0.0f,
+					(spriteBound.y + spriteBound.halfHeight)
+							- (layerViewport.y + layerViewport.halfHeight));
+
+			float sourceWidth = ((spriteBound.halfWidth * 2 - sourceX) - Math
+					.max(0.0f, (spriteBound.x + spriteBound.halfWidth)
+							- (layerViewport.x + layerViewport.halfWidth)));
+			float sourceHeight = ((spriteBound.halfHeight * 2 - sourceY) - Math
+					.max(0.0f, (layerViewport.y - layerViewport.halfHeight)
+							- (spriteBound.y - spriteBound.halfHeight)));
+
+			// Determining the scale factor for mapping the bitmap onto this
+			// Rect and set the sourceRect value.
+
+			Bitmap spriteBitmap = gameObject.getBitmap();
+			
+			float sourceScaleWidth = (float) spriteBitmap.getWidth()
+					/ (2 * spriteBound.halfWidth);
+			float sourceScaleHeight = (float) spriteBitmap.getHeight()
+					/ (2 * spriteBound.halfHeight);
+
+			sourceRect.set((int) (sourceX * sourceScaleWidth),
+					(int) (sourceY * sourceScaleHeight),
+					(int) ((sourceX + sourceWidth) * sourceScaleWidth),
+					(int) ((sourceY + sourceHeight) * sourceScaleHeight));
+
+			// Determine =which region of the screen viewport (relative to the
+			// canvas) we will be drawing to.
+
+			// Determine the x- and y-aspect rations between the layer and screen viewports
+			float screenXScale = (float) screenViewport.width / (2 * layerViewport.halfWidth);
+			float screenYScale = (float) screenViewport.height / (2 * layerViewport.halfHeight);
+
+			float screenX = screenViewport.left + screenXScale * Math.max(
+					0.0f,
+					((spriteBound.x - spriteBound.halfWidth)
+							- (layerViewport.x - layerViewport.halfWidth)));
+			float screenY = screenViewport.top + screenYScale * Math.max(
+					0.0f,
+					((layerViewport.y + layerViewport.halfHeight)
+							- (spriteBound.y + spriteBound.halfHeight)));
+
+			// Set the region to the canvas to which we will draw
+			screenRect.set((int) screenX, (int) screenY,
+					(int) (screenX + sourceWidth * screenXScale),
+					(int) (screenY + sourceHeight * screenYScale));
+
+			return true;
+		}
+
+		// Not visible
+		return false;
+	}
+	
+	// /////////////////////////////////////////////////////////////////////////
+	// Aspect Ratios
+	// /////////////////////////////////////////////////////////////////////////
+			
+	/**
+	 * Create a 3:2 aspect ratio screen viewport
+	 * 
+	 * @param game Game view for which the screenport will be defined
+	 * @param screenViewport Screen viewport to be defined
+	 */
+	public static void create3To2AspectRatioScreenViewport(
+			Game game, ScreenViewport screenViewport) {
+		
+		// Create the screen viewport, size it to provide a 3:2 aspect
+		float aspectRatio = (float) game.getScreenWidth() / (float) game.getScreenHeight();
+
+		// if 4:3, abc
+		// if between 1.3333 and 1.5, render the 3:2
+		// if 3:2, abc
+		// if between 1.5 and 1.6, render 16:10
+		// if 16:10, abc
+		// if between 1.6 and 1.78(16:9), render the 16:9
+		// if 16:9, abc
+
+		// Updated implementation: now handles any aspect ratio.
+		// If the device's aspect ratio is between 2 commonly used aspect ratios (e.g. between 16:9 and 16:10),
+		// then the "wider" or less clipped aspect ratio is used. This results in a small portion on each side of the
+		// gamescreen being unviewable, but it stops the alternative happening (black bars appearing on sides of screen)
+		// (old implementation had black bars on the sides of 16:9 screens)
+		//
+
+	/*	if (aspectRatio < 1.34f) { // 4:3 ratio (any anything more square than 4:3)
+
+		}
+		else if (aspectRatio >= 1.34f && aspectRatio <= 1.5f) { // 3:2 ratio (and anything between 4:3 & 3:2)
+
+		}
+		else if (aspectRatio > 1.5f && aspectRatio <= 1.6f) { // 16:10 ratio (and anything between 3:2 and 16:10)
+
+		}
+		else if (aspectRatio > 1.6f) { // 16:9 ratio (and anything between 16:10 and 16:9)
+
+		}*/
+
+		/*
+		if aspect ratio greater than 3:2
+			work out how many pixels on each side of the screen is more than 3:2
+			and render that much IN on each side..? so there's black bars?
+		 */
+		//ORIGINAL GAGE CODE
+		if (aspectRatio > 1.5f) { // 16:9 ratio & 16:10 ratio
+			int viewWidth = (int) (game.getScreenHeight() * 1.5f);
+			int viewOffset = (game.getScreenWidth() - viewWidth) / 2;
+			screenViewport.set(viewOffset, 0, viewOffset + viewWidth, game.getScreenHeight());
+		}
+		else { // 4:3
+			int viewHeight = (int) (game.getScreenWidth() / 1.5f);
+			int viewOffset = (game.getScreenHeight() - viewHeight) / 2;
+			screenViewport.set(0, viewOffset, game.getScreenWidth(), viewOffset + viewHeight);
+		}
+
+
+	}
+}

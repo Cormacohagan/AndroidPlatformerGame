@@ -1,0 +1,23 @@
+************************************************************************************************
+* Program: LevelBuilder                                                                        *
+* By: Ciaran Ewing-James                                                                       *
+************************************************************************************************
+
+LevelBuilder.jar is a swing based GUI which allows for the creation of tile based levels to be
+made easily and quickly.
+
+Note:
+-Greater than ~25 tiles onscreen causes some screen flickering
+
+################################################################################################
+##     Can't launch from inside AndroidStudio                                                 ##
+##     Launch LevelBuilder from file explorer (right click > show in explorer)                ##
+################################################################################################
+
+(If you do attempt to launch from Android studio and can't run the main app,
+change the run dialog beside the run icon from LevelBuilder.jar to app)
+
+The code is on the svn under Lunar Game Tools as an eclipse project if you want to have a look.
+A zip file of project is also included.
+
+If you have any ideas, questions, bugs, let me know.

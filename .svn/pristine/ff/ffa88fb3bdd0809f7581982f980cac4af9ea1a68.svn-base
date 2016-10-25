@@ -1,0 +1,32 @@
+- Organised by priority (not by worth), with 1 having the highest priority
+- Feel free to shift some tasks around if you disagree
+
+[1] - Ability to resize game objects
+[1] - Adapt game to all screen sizes and resolutions (by rendering to a fixed size bitmap first)
+[X] - Ability to finish the level (use Trigger class)
+
+[X] - Viewport that follows the player
+[X] - Pause button (allow player to resume & exit the game)
+[2] - Fix collision bugs (see Bugs to fix.txt)
+
+[3] - Increase gravity and running speeds (without breaking collision)
+[3] - Pickups
+[3] - HUD that displays health, lives and pause-button / shoot-button graphically
+[X] - Transition back to main menu after all lives are lost
+
+[4] - Ability to fire a projectile
+[4] - Multi-thread the gameloop
+[4] - AI & pathfinding (A* is a good candidate)
+[4] - 1 way platforms
+
+[5] - Matrices (for transforms etc)
+[5] - Doors / ways to enter another area
+[5] - Ladders
+[5] - Improve memory management (asset manager should dispose of unused assets)
+
+[6] - Sloped tiles
+
+------
+Performance:
+- Some interesting notes on optimising code performance on android, worth a read:
+http://developer.android.com/training/articles/perf-tips.html

@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<Dialogues>
+
+    <Dialogue
+        id = "test_dialogue_1"
+        personSpeaking = "test name 1"
+        text = "test text goes here oh boy oh yep thats some good test text delicious"
+        soundToPlay = "testSound1"
+    />
+    <Dialogue
+        id = "test_dialogue_2"
+        personSpeaking = "test name 2"
+        text = "second batch of test text right here comin right up blad"
+        soundToPlay = "testSound2"
+    />
+    <Dialogue
+        id = "enemy_1_description"
+        personSpeaking = "none"
+        text = "placeholder text"
+    />
+    <Dialogue
+        id = "enemy_2_description"
+        personSpeaking = "none"
+        text = "placeholder text"
+    />
+    <Dialogue
+        id = "enemy_3_description"
+        personSpeaking = "none"
+        text = "placeholder text"
+    />
+    <Dialogue
+            id = "enemy_4_description"
+            personSpeaking = "none"
+            text = "placeholder text"
+        />
+    <Dialogue
+            id = "enemy_5_description"
+            personSpeaking = "none"
+            text = "placeholder text"
+        />
+    <Dialogue
+            id = "enemy_6_description"
+            personSpeaking = "none"
+            text = "placeholder text"
+        />
+    <Dialogue
+            id = "enemy_7_description"
+            personSpeaking = "none"
+            text = "placeholder text"
+        />
+    <Dialogue
+            id = "item_1_description"
+            personSpeaking = "none"
+            text = "placeholder text"
+        />
+    <Dialogue
+                id = "item_2_description"
+                personSpeaking = "none"
+                text = "placeholder text"
+            />
+    <Dialogue
+                id = "item_3_description"
+                personSpeaking = "none"
+                text = "placeholder text"
+            />
+    <Dialogue
+                id = "item_4_description"
+                personSpeaking = "none"
+                text = "placeholder text"
+            />
+    <Dialogue
+                id = "item_5_description"
+                personSpeaking = "none"
+                text = "placeholder text"
+            />
+    <Dialogue
+                id = "item_6_description"
+                personSpeaking = "none"
+                text = "placeholder text"
+            />
+    <Dialogue
+                id = "item_7_description"
+                personSpeaking = "none"
+                text = "placeholder text"
+            />
+
+
+</Dialogues>

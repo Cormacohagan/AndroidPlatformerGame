@@ -1,0 +1,269 @@
+package com.gamedev.techtronic.lunargame.Level;
+
+import android.content.Context;
+import android.graphics.Bitmap;
+
+import com.gamedev.techtronic.lunargame.gage.engine.ElapsedTime;
+import com.gamedev.techtronic.lunargame.gage.engine.graphics.IGraphics2D;
+import com.gamedev.techtronic.lunargame.gage.engine.io.FileIO;
+import com.gamedev.techtronic.lunargame.gage.util.BoundingBox;
+import com.gamedev.techtronic.lunargame.gage.world.GameObject;
+import com.gamedev.techtronic.lunargame.gage.world.GameScreen;
+import com.gamedev.techtronic.lunargame.gage.world.LayerViewport;
+import com.gamedev.techtronic.lunargame.gage.world.ScreenViewport;
+
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
+import org.xml.sax.SAXException;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.util.ArrayList;
+
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.xpath.XPath;
+import javax.xml.xpath.XPathConstants;
+import javax.xml.xpath.XPathExpressionException;
+import javax.xml.xpath.XPathFactory;
+
+public class Level extends GameObject{
+
+    private GameObject mCurrentTile;
+    private GameObject background;
+    private ArrayList<Tile> levelTileList = new ArrayList<>();
+    private ArrayList<Tile> collidableTileList = new ArrayList<>();
+
+    private int horizontalTileNumber;
+
+
+    public Level(float x, float y, Bitmap bitmap, GameScreen gameScreen) {
+        super(x, y, bitmap, gameScreen);
+    }
+
+
+    public void loadLevel(String levelID, Context context) {
+        String levelFilePath="";
+        InputStreamReader inputStreamReader;
+        BufferedReader bufferedReader;
+
+        FileIO f = new FileIO(context);
+
+        String s= "";
+        ArrayList<String> tempStringList = new ArrayList<>();
+
+        try {
+            // Start of level xml stuff
+            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+            DocumentBuilder builder = factory.newDocumentBuilder();
+
+            Document doc = builder.parse(f.readAsset("xml/levels"));
+
+            XPath xPath = XPathFactory.newInstance().newXPath();
+
+            String expression = "/Levels/Level";
+            NodeList nodeList = (NodeList) xPath.compile(expression).evaluate(doc, XPathConstants.NODESET);
+
+            // Get location of level data from xml file
+            for (int i = 0; i < nodeList.getLength(); i++) {
+                Node nNode = nodeList.item(i);
+                if (((Element) nNode).getAttribute("id").equalsIgnoreCase(String.valueOf(levelID))) {
+                    levelFilePath = ((Element) nNode).getAttribute("tileData");
+                    break;
+                }
+            }
+            // End of level xml stuff
+
+
+            // Start of tile xml stuff
+            doc = builder.parse(f.readAsset("xml/tileData"));
+            expression = "/Tiles/Tile";
+            nodeList = (NodeList) xPath.compile(expression).evaluate(doc, XPathConstants.NODESET);
+
+            // Load level data from file into tempStringList
+            inputStreamReader = new InputStreamReader(f.readAsset(levelFilePath));
+            bufferedReader = new BufferedReader(inputStreamReader);
+
+            while (bufferedReader.ready()) {
+
+                // read 1 line at a time, add to tempStringList for additional processing
+
+                s= bufferedReader.readLine();
+                tempStringList.add(s);
+
+            }
+
+            horizontalTileNumber = s.length();
+            bufferedReader.close();
+            inputStreamReader.close();
+
+            // x is offset a little to fix alignment
+            // Hard coded value alert! AWOOGA!
+            // TODO: Allow for tiles of various sizes automatically
+            float x=15.5f;
+            float y=0;
+
+            AnimatedTile animTile;
+            Tile tile;
+
+            // First read the level from the bottom to top, line by line, left to right
+            // Read each character, and add the corresponding tile (data gotten from xml) to levelTileList
+            for (int i = tempStringList.size()-1; i >= 0; i--) {
+
+                s = tempStringList.get(i);
+
+                for (int j = 0; j < s.length(); j++) {
+
+                    for (int k = 0; k < nodeList.getLength(); k++) {
+
+                        Node nNode = nodeList.item(k);
+
+                        if (((Element) nNode).getAttribute("char").equalsIgnoreCase(String.valueOf(s.charAt(j)))) {
+                            if (Boolean.parseBoolean(((Element) nNode).getAttribute("isAnimated"))){
+
+                                animTile = new AnimatedTile(x, y, mGameScreen.getGame().getAssetManager().getBitmap("tileSheet"), mGameScreen,
+                                        ((Element) nNode).getAttribute("name"),
+                                        ((Element) nNode).getAttribute("char").charAt(0),
+                                        Integer.parseInt(((Element) nNode).getAttribute("startX")),
+                                        Integer.parseInt(((Element) nNode).getAttribute("startY")),
+                                        Integer.parseInt(((Element) nNode).getAttribute("tileWidth")),
+                                        Integer.parseInt(((Element) nNode).getAttribute("tileHeight")),
+                                        Boolean.parseBoolean(((Element) nNode).getAttribute("hasCollision")),
+                                        Boolean.parseBoolean(((Element) nNode).getAttribute("isAnimated")),
+                                        Integer.parseInt(((Element) nNode).getAttribute("frameCount")),
+                                        Integer.parseInt(((Element) nNode).getAttribute("frameRate")),
+                                        Boolean.parseBoolean(((Element) nNode).getAttribute("isDamaging")));
+
+                                levelTileList.add(animTile);
+
+                                if (animTile.isCollidable()){
+                                    collidableTileList.add(animTile);
+                                }
+                            }else {
+                                tile = new Tile(x, y, mGameScreen.getGame().getAssetManager().getBitmap("tileSheet"), mGameScreen,
+                                        ((Element) nNode).getAttribute("name"),
+                                        ((Element) nNode).getAttribute("char").charAt(0),
+                                        Integer.parseInt(((Element) nNode).getAttribute("startX")),
+                                        Integer.parseInt(((Element) nNode).getAttribute("startY")),
+                                        Integer.parseInt(((Element) nNode).getAttribute("tileWidth")),
+                                        Integer.parseInt(((Element) nNode).getAttribute("tileHeight")),
+                                        Boolean.parseBoolean(((Element) nNode).getAttribute("hasCollision")),
+                                        Boolean.parseBoolean(((Element) nNode).getAttribute("isAnimated")),
+                                        Boolean.parseBoolean(((Element) nNode).getAttribute("isDamaging")));
+                                levelTileList.add(tile);
+
+                                if (tile.isCollidable()){
+                                    collidableTileList.add(tile);
+                                }
+                            }
+                            // positional stuff
+                            // Hard coded value alert! AWOOGA!
+                            // Some values are decremented by 0.5, reason: small pixel gaps line between tiles
+                            // not sure why it happens but this fixes it by moving them together a little bit (They don't seem to overlap).
+                            // If someone knows why this happens I'd like to know, these hardcoded values are gonna be dodgy later down the road.
+                            // Also i+1 because: (0 % Integer) = 0
+                            if ((j+1) % horizontalTileNumber==0){
+                                y+=15.5f;
+                                x=15.5f;
+                            }else {
+                                x+=15.5f;
+                            }
+                        }
+
+                    }
+
+                }
+            }
+
+        }catch (ParserConfigurationException e) {
+            e.printStackTrace();
+        } catch (SAXException e) {
+            e.printStackTrace();
+        } catch (XPathExpressionException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        // End of tile xml stuff
+
+        background = new GameObject(0,0,mGameScreen.getGame().getAssetManager().getBitmap("background"),mGameScreen);
+    }
+
+    @Override
+    public void draw(ElapsedTime elapsedTime, IGraphics2D graphics2D, LayerViewport layerViewport, ScreenViewport screenViewport) {
+
+        // Draw the background
+        drawBackground(elapsedTime,graphics2D, layerViewport, screenViewport);
+
+        // Draw all visible tiles to screen
+        for (int i = 0; i < levelTileList.size(); i++) {
+            mCurrentTile = levelTileList.get(i);
+            mCurrentTile.draw(elapsedTime,graphics2D,layerViewport,screenViewport);
+        }
+    }
+
+    /**
+     * Returns the list of all tiles that make up the level, including empty tiles.
+     * @return
+     */
+    public ArrayList<Tile> getLevelTileList(){
+        return levelTileList;
+    }
+
+    /**
+     * Returns the list of only the tiles that have collision.
+     * @return
+     */
+    public ArrayList<Tile> getCollidableTileList(){return collidableTileList;}
+
+    /**
+     * Tiles the specified background image over the area of the level.
+     * This is a placeholder until a good parallax/animated background class is made.
+     * @param elapsedTime
+     * @param graphics2D
+     * @param layerViewport
+     * @param screenViewport
+     */
+    private void drawBackground(ElapsedTime elapsedTime, IGraphics2D graphics2D, LayerViewport layerViewport, ScreenViewport screenViewport){
+
+        // Fill the level background with the specified background tile
+        // PlaceHolder until a good class with parallax and animation and all that good stuff is made.
+        for (int x = 0; x < horizontalTileNumber*16; x+=background.getBitmap().getWidth()) {
+            for (int y= 0; y < 1000; y+= background.getBitmap().getHeight()) {
+                background.setPosition((float) x, (float) y);
+                background.draw(elapsedTime,graphics2D, layerViewport, screenViewport);
+            }
+        }
+    }
+
+
+    @Override
+    public void setPosition(float x, float y) {
+        // Do nothing
+    }
+
+    @Override
+    public Bitmap getBitmap() {
+        // Do nothing
+        return null;
+    }
+
+    @Override
+    public BoundingBox getBound() {
+        // Do nothing
+        return null;
+    }
+
+    @Override
+    public void update(ElapsedTime elapsedTime) {
+        // TODO: Make animated tile updates more efficient! (maybe make another arraylist for animatedTiles)
+        for (int i = 0; i < collidableTileList.size(); i++) {
+            collidableTileList.get(i).update(elapsedTime);
+        }
+    }
+}
+

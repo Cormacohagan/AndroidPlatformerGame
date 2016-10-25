@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<Dialogues>
+
+    <Dialogue
+        id = "test_dialogue_1"
+        personSpeaking = "test name 1"
+        text = "test text goes here oh boy oh yep thats some good test text delicious"
+        soundToPlay = "testSound1"
+        bitmapToDisplay = "dialogBox"
+        font = "placeholder"
+    />
+    <Dialogue
+        id = "test_dialogue_2"
+        personSpeaking = "test name 2"
+        text = "second batch of test text right here comin right up blad"
+        soundToPlay = "testSound2"
+        bitmapToDisplay = dialogBox"
+        font = "placeholder2"
+    />
+
+</Dialogues>

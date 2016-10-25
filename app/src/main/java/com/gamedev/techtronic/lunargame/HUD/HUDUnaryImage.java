@@ -1,0 +1,37 @@
+package com.gamedev.techtronic.lunargame.HUD;
+
+import android.graphics.Bitmap;
+
+import com.gamedev.techtronic.lunargame.gage.engine.ElapsedTime;
+import com.gamedev.techtronic.lunargame.gage.engine.graphics.IGraphics2D;
+import com.gamedev.techtronic.lunargame.gage.world.GameScreen;
+import com.gamedev.techtronic.lunargame.gage.world.LayerViewport;
+import com.gamedev.techtronic.lunargame.gage.world.ScreenViewport;
+
+public class HUDUnaryImage extends HUDElement {
+    private int value;
+
+    public HUDUnaryImage(String name, float x, float y, Bitmap image, int value, GameScreen gameScreen) {
+        super(name, x, y, image, gameScreen);
+
+        this.value = value;
+    }
+
+    public void update(ElapsedTime elapsedTime, int value) {
+        this.value = value;
+    }
+
+    @Override
+    public void draw(ElapsedTime elapsedTime, IGraphics2D graphics2D, LayerViewport layerViewport, ScreenViewport screenViewport) {
+        float x = this.position.x;
+        float y = this.position.y;
+        float width = this.mBitmap.getWidth();
+        float height = this.mBitmap.getHeight();
+
+        for (int i = 0; i < value; i++) {
+            drawScreenRect.set((int) x, (int) y, (int) (x + width), (int) (y + height));
+            graphics2D.drawBitmap(mBitmap, null, drawScreenRect, null);
+            x += width;
+        }
+    }
+}

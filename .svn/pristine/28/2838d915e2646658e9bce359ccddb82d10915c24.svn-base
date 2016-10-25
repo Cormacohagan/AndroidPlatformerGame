@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<Levels>
+    <Level id="0" name="Test Level" tileData="txt/level1"/>
+
+</Levels>

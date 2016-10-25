@@ -1,0 +1,358 @@
+package com.gamedev.techtronic.lunargame;
+
+import android.graphics.Bitmap;
+import android.graphics.Color;
+import android.graphics.Paint;
+import android.graphics.Rect;
+import android.graphics.Typeface;
+import android.util.Log;
+
+import com.gamedev.techtronic.lunargame.Screens.LunarGameScreen;
+import com.gamedev.techtronic.lunargame.gage.engine.AssetStore;
+import com.gamedev.techtronic.lunargame.gage.engine.ElapsedTime;
+import com.gamedev.techtronic.lunargame.gage.engine.graphics.IGraphics2D;
+import com.gamedev.techtronic.lunargame.gage.engine.input.Input;
+import com.gamedev.techtronic.lunargame.gage.util.BoundingBox;
+import com.gamedev.techtronic.lunargame.gage.world.GameScreen;
+import com.gamedev.techtronic.lunargame.gage.world.LayerViewport;
+import com.gamedev.techtronic.lunargame.gage.world.ScreenViewport;
+import com.gamedev.techtronic.lunargame.gageExtension.AnimatedSprite;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.regex.PatternSyntaxException;
+
+public class DialogueBox extends AnimatedSprite implements Runnable {
+
+    // there is no local update() method
+    // gameScreen.update() should call superclass AnimatedSprite's update() method for updating the dialogue box's border animation
+
+    private boolean active; // determines whether dialogue box is visible
+    private boolean receiveInput = false;
+    private float linePosX, line1LinePosY, line2LinePosY, line3LinePosY, importedLinePosY, dBoxWidth, vlineMax;
+    private String storedText = "Text failed to load!", personSpeaking, fontName, borderName, soundName, dialogueID, debugText;  // holds the text parsed from the dialogue XML file
+    private int vLine; // represents what "line" or height to draw text into the dialogueBox
+    private Rect dialogueRect; // boundary for drawn text to be checked against (so text doesn't trail out of the dialogue box)
+    long lastUpdateOccuredTime, currentTime, textUpdateRate; //textUpdateRate is in ms
+    String [] displayText; // The actual text that is displayed. One subscript holds one line of dialogue
+    // (vLine goes in [] & is incremented to display next line)
+    // displayText is storedText split up into one word per-array-subscript
+    List<String> wordsToDisplay;
+    GameScreen gameScreen;
+    LayerViewport layerViewport; // used to edit dialogueRect's bounds consistently (regardless of how zoomed in the viewport is)
+    Paint paint, paintRect;
+    Typeface customFont;
+    BoundingBox boundingBox;
+    AssetStore mAssetManager;
+    private Input input;
+    Thread dThread;
+
+    public DialogueBox (float x, float y, Bitmap borderBitmap, GameScreen gameScreen,
+                        String animationName, Boolean isLooping, LayerViewport layerViewport) {
+        super(x, y, borderBitmap, gameScreen, animationName, isLooping);
+
+        importedLinePosY = (y * 4) + 53; // y pos for dialogue: drawn under the top of the dialogue border
+        linePosX = x + 30; // x pos for dialogue: starts being drawn a little to the right of the dialogue border
+        line1LinePosY = importedLinePosY; // these are heights of line 1, 2 and 3 in the dialogue box
+        line2LinePosY = line1LinePosY + 68;
+        line3LinePosY = line2LinePosY + 68;
+        vlineMax = 3; // how many lines of text can be displayed in the dialogue box
+        this.layerViewport = layerViewport;
+        this.gameScreen = gameScreen;
+
+        textUpdateRate = 35;
+        //textUpdateRate = mGameScreen.getGame();
+
+        mAssetManager = gameScreen.getGame().getAssetManager();
+        boundingBox = this.getBound(); // getting bounding box of dialogue box border..
+
+        // ..and trimming the sides. used to compare width of text on each line
+        // (to decide when to take a new line)
+        dBoxWidth = (boundingBox.getWidth() - 70) * 3;
+
+        input = mGameScreen.getGame().getInput();
+
+
+        // dialogue box doesn't attempt to display text until the DialogueBox instance receives text to display (i.e. when active = true)
+        active = false;
+
+        // creating a rectangle that corresponds exactly to the dialogue box's sprite (and trimmed down on each side
+        // this rectangle is used to evaluate where text should be drawn, should a new line be taken, etc
+       // dialogueRect = new Rect((int) (boundingBox.getLeft() /*+ layerViewport.getWidth()/50*/),
+                //(int) (boundingBox.getTop()/*+ layerViewport.getHeight()/50*/), (int) (boundingBox.getRight() /*- layerViewport.getWidth()/50*/),
+               // (int) (boundingBox.getBottom() /*- layerViewport.getHeight()/50*/));
+        // consider: set text size according to device stats
+
+
+        paint = new Paint();
+        paint.setStyle(Paint.Style.STROKE);
+        paint.setColor(Color.WHITE);
+        paint.setTextSize(43);
+        paintRect = new Paint();
+        paintRect.setStyle(Paint.Style.FILL);
+        paintRect.setColor(Color.RED);
+        paintRect.setAlpha(200);
+
+        displayText = new String[] {" ", " ", " "};
+
+    }
+
+    // Called when we want a dialogue box to appear on screen. Receives an ID for what dialogue to display,
+    // parses XML and retrieves dialogue, and splits up the dialogue into an arraylist (one word per subscript)
+    // Caller should start a thread so DialogueBox.run() can update it's contents regularly.
+    // (boolean active is set to true, allowing run() to work. If it's ever set to false, dialogue box will disappear
+    public void activateDialogueBox(String dialogueID) {
+
+        // ***START OF XML PARSING***
+        // parsing XML (yanked from Ciaran's AnimatedSprite class)
+        // looks through all "id" attributes in txt/dialogueText, if any id = the arg dialogueID..
+        // all of the necessary info for this piece of dialogue is taken from the XML file
+
+        /* temporary xml parsing comment out
+        try {
+            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+            DocumentBuilder builder = factory.newDocumentBuilder();
+
+            FileIO f = new FileIO(mGameScreen.getGame().getActivity());
+
+            Document doc = builder.parse(f.readAsset("xml/dialogueText"));
+
+            XPath xPath = XPathFactory.newInstance().newXPath();
+
+            String expression = "/Dialogues/Dialogue";
+
+            NodeList nodeList = (NodeList) xPath.compile(expression).evaluate(doc, XPathConstants.NODESET);
+
+            for (int i = 0; i < nodeList.getLength(); i++) {
+                Node nNode = nodeList.item(i);
+                if (((Element) nNode).getAttribute("id").equalsIgnoreCase(dialogueID)){
+                    // if any of the stored IDs equal the one received in this method..
+
+                    // store relevant attributes in dialoguebox's variables
+                    debugText = "yeah";
+                    storedText = ((Element) nNode).getAttribute("text");
+                    personSpeaking = ((Element) nNode).getAttribute("personSpeaking");
+                    fontName = ((Element) nNode).getAttribute("font");
+                    borderName = ((Element) nNode).getAttribute("bitmapToDisplay");
+                    soundName = ((Element) nNode).getAttribute("soundToPlay");
+
+
+                    break;
+                }
+            }
+
+        }
+        catch (ParserConfigurationException e) {
+            e.printStackTrace();
+        } catch (SAXException e) {
+            e.printStackTrace();
+        } catch (XPathExpressionException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+         temporary xml parsing comment out*/
+        // ***END OF XML PARSING***
+
+        // splitting the text taken from xml file into an arraylist of strings
+        // (1 word per subscript, split when space is encountered)
+        try{
+            storedText = "boop";
+
+            // obj stored in a new arraylist so it's not a fixed size (Arrays.asList would normally return a fixed size arraylist)
+            wordsToDisplay = new ArrayList<String>(Arrays.asList(storedText.split("\\s+")));
+
+            Log.d("DialogueRectsBounds", "dialogue box sprite's width:" + boundingBox.getWidth());
+
+        }
+        catch(PatternSyntaxException e) {
+            e.printStackTrace();
+        }
+        catch (NullPointerException e) {
+            e.printStackTrace();
+            Log.d("debug xml parsing wwwww", storedText + "g");
+            Log.d("debug xml parsing wwwww", personSpeaking + "g");
+            Log.d("debug xml parsing wwwww", debugText + "g");
+        }
+        //setPosition(layerViewport.getWidth()/2, layerViewport.getHeight()/3);
+        setPosition(layerViewport.getLeft() + (layerViewport.getWidth()/2), layerViewport.getBottom() + (layerViewport.getHeight()/3));
+        active = true;
+        lastUpdateOccuredTime = System.nanoTime();
+
+    }
+
+    public void run() {
+
+        //boundingBox = this.getBound();
+        dThread = Thread.currentThread(); // primarily used to be able to notify thread after user input
+
+        while (active) {
+
+            //Log.d("Dialogue Thread", "Loop " + count);
+            //Log.d("text debug", "g " +wordsToDisplay.get(0));
+            //displayText[0] = wordsToDisplay.get(0).substring(0, 1);
+            Log.d("test", "thread ran again");
+
+            if (wordsToDisplay.isEmpty()) { // if there's no words left to display in wordsToDisplay[] at all
+                // (note: wordsToDisplay is checked to be empty twice in this loop to avoid exception being thrown)
+
+                try { // allow user input, and dialogue thread waits until input is received
+                    synchronized (Thread.currentThread()) {
+                        receiveInput = true;
+                        dThread.wait();
+                    }
+                }
+                catch (InterruptedException e){
+                    e.printStackTrace();
+                }
+            }
+
+            if (wordsToDisplay.get(0).isEmpty()) { // check if our current word has any characters left to print. If it doesn't..
+
+                // ..remove this empty word from the arraylist and add a space to the text to be displayed
+                Log.d("dialogue debug", "word is now empty");
+                displayText[vLine] += " ";
+                wordsToDisplay.remove(0);
+
+               // if our new word to print can fit on this current line..
+                Log.d("dialogue debug", "width of current line of text in pixels: " + paint.measureText(displayText[vLine], 0, displayText[vLine].length()));
+                if (paint.measureText(displayText[vLine], 0, displayText[vLine].length()) < dBoxWidth) {
+                    // ..start adding  it's characters
+
+                    // something wrong in here
+                }
+                else { // text can't fit on this current line
+
+                    // are there lines available to draw the rest of the text to?
+                    if (vLine < 2) {
+                        // yes, shift to next line
+                        vLine += 1;
+                    }
+                    else { // no, there are no lines left but still text to show
+
+                        try { // allow user input, and dialogue thread waits until input is received
+                            synchronized (Thread.currentThread()) {
+                                receiveInput = true;
+                                dThread.wait();
+                            }
+                        }
+                        catch (InterruptedException e){
+                            e.printStackTrace();
+                        }
+                    }
+                }
+
+            }
+            else { // if there's still characters left to print in the word we're working with..
+                    // ..then there is definitely still room for further letters (as space left for text was checked @ start of word)
+                addNextCharacter();
+
+            }
+        }
+
+    }
+
+
+    public void addNextCharacter () {
+        Log.d("test", "addNextChar method was called");
+        displayText[vLine] += wordsToDisplay.get(0).charAt(0);
+
+        try {
+            if (wordsToDisplay.get(0).charAt(0) == ',') {
+                dThread.sleep(textUpdateRate * 4);
+            }
+            else if (wordsToDisplay.get(0).charAt(0) == '.') {
+                dThread.sleep(textUpdateRate * 7);
+            }
+            else {
+                dThread.sleep(textUpdateRate);
+            }
+
+        }
+        catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        String updatedWord = wordsToDisplay.get(0).substring(1);
+
+        wordsToDisplay.set(0, updatedWord);
+        mAssetManager.getSound("dialogueSpeech1").play();
+
+    }
+
+    public void setActive(Boolean active) {
+        this.active = active;
+    }
+
+    // measured in ms, will be called by options screen to change rate text is drawn into dialogue box
+    public void setTextUpdateRate(int textUpdateRate) {
+        this.textUpdateRate = textUpdateRate;
+    }
+
+    //include .ttf when calling setFont()
+    public void setFont(String fontName) {
+        customFont = Typeface.createFromFile("fonts/" + fontName);
+        paint.setTypeface(customFont);
+    }
+
+    public void update(ElapsedTime elapsedTime) {
+
+        super.update(elapsedTime);
+
+        if (receiveInput) {
+            if (input.existsTouch(0)){
+                Log.d("touch debug", "input from user was received");
+
+                // first check if there is more dialogue to display, if yes, do that, if not, change gamestate
+
+                if (wordsToDisplay.isEmpty()) {
+                    mAssetManager.getSound("dialogueEnd").play();
+                    if (gameScreen instanceof LunarGameScreen) {
+                        LunarGameScreen.setScreenState(LunarGameScreen.ScreenState.PLAY);
+                    }
+                }
+                else {
+
+                    // get rid of the currently displayed text
+                    for(int i = 0; i < displayText.length; i++) {
+                        displayText[i] = "";
+                    }
+                    // start drawing text at line 1 of the dialogue box
+                    vLine = 0;
+
+                    // notify dialogue thread to continue printing text
+                    synchronized (dThread) {
+                        dThread.notify();
+                    }
+                }
+                // disable user input until text has been displayed
+                receiveInput = false;
+            }
+        }
+    }
+
+    public void draw (ElapsedTime elapsedTime, IGraphics2D graphics2D, LayerViewport layerViewport, ScreenViewport screenViewport) {
+
+        // drawing dialogue box's border
+        super.draw(elapsedTime, graphics2D, layerViewport, screenViewport);
+
+        // draw dialogue line 1 (which is  always present as long as the dialogue box is on screen)
+        graphics2D.drawText(displayText[0], linePosX, line1LinePosY, paint);
+
+        // if there are 2 lines of text to display..
+        if (vLine >= 1) {
+            // draw dialogue line 2
+            graphics2D.drawText(displayText[1], linePosX, line2LinePosY, paint);
+        }
+
+        // if there are 3 lines of text to display..
+        if (vLine >= 2) {
+            // draw dialogue line 3
+            graphics2D.drawText(displayText[2], linePosX, line3LinePosY, paint);
+        }
+
+
+        //graphics2D.drawRect(boundingBox.getLeft(), boundingBox.getTop(), boundingBox.getRight(), boundingBox.getBottom(), paintRect);
+    }
+}

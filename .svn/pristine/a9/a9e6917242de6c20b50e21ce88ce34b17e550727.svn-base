@@ -1,0 +1,170 @@
+package com.gamedev.techtronic.lunargame.AI;
+
+import android.util.Log;
+
+import com.gamedev.techtronic.lunargame.Level.Level;
+import com.gamedev.techtronic.lunargame.gage.util.Vector2;
+
+import java.util.ArrayList;
+
+
+/**
+ * Implementation of A* pathfinding algorithm.
+ *
+ */
+public class AStarPathFinder implements Runnable{
+
+    private ArrayList<Vector2> path = new ArrayList<>();
+    private Level level;
+    private int sx, sy, tx, ty;
+
+    public AStarPathFinder(Level level) {
+        this.level = level;
+    }
+
+    public void setStartPosition(Vector2 position){
+        this.sx = (int)position.x;
+        this.sy = (int)position.y;
+    }
+
+    public void setGoalPosition(Vector2 position){
+        this.tx = (int)position.x;
+        this.ty = (int)position.y;
+    }
+
+    public ArrayList<Vector2> getPath() {
+        return path;
+    }
+
+    public static float heuristic(Node a, Node b){
+        // Manhattan distance
+//        return Math.abs(a.getX()-b.getX()) + Math.abs(a.getY()-b.getY());
+
+        float dx = Math.abs(a.getX() - b.getX());
+        float dy = Math.abs(a.getY() - b.getY());
+        return (dx + dy);
+
+    }
+
+    @Override
+    public void run() {
+
+        Graph g = new Graph(level);
+        Node[][] nodes = g.getNodeArray();
+
+        Node start = nodes[sx][sy];
+        Node goal = nodes[tx][ty];
+        Node current = null;
+
+        path = new ArrayList<>();
+
+        Node endNode = null;
+
+        ArrayList<Node> open = new ArrayList<>();
+        ArrayList<Node> closed = new ArrayList<>();
+
+        start.setCostSoFar(0);
+        start.setParent(null);
+
+        open.add(start);
+
+        int counter=0;
+
+        while(!open.isEmpty()) {
+//            Log.d("AStar", "Open Size: "+ String.valueOf(open.size()));
+//            Log.d("AStar", "Closed Size: "+ String.valueOf(closed.size()));
+            // get smallest cost so far
+            float smallest=Integer.MAX_VALUE;
+            for (int i = 0; i < open.size(); i++) {
+
+                if (open.get(i).getCostSoFar() < smallest) {
+                    smallest = open.get(i).getCostSoFar();
+                    current = open.get(i);
+//                    Log.d("AStar", "searching for smallest value");
+                }
+
+            }
+
+            for (Connection connection: current.getConnections()){
+
+                if (connection.getToNode().getX() == goal.getX() && connection.getToNode().getY()==goal.getY()){
+                    connection.getToNode().setParent(current);
+                    current = connection.getToNode();
+//                    Log.d("Astar", "Found goal");
+                    break;
+                }
+
+                connection.getToNode().setCostSoFar(current.getCostSoFar() + connection.getCost());
+                connection.getToNode().setHeuristic(heuristic(connection.getToNode(), goal));
+                connection.getToNode().setCost(connection.getToNode().getCostSoFar() + connection.getToNode().getHeuristic());
+
+                boolean check=false;
+                boolean inOpen=false;
+                boolean inClosed = false;
+
+                Node temp=null;
+                for (Node n: open){
+                    if ((n.getX() == connection.getToNode().getX()) && (n.getY() == connection.getToNode().getY())){
+//                        Log.d("Astar", "Node with same position found in open");
+                        temp=n;
+                        check=true;
+                        inOpen=true;
+                    }
+                }
+                if (check){
+                    if (temp.getCost()<connection.getCost()){
+//                        Log.d("AStar", "node skipped");
+                        // Skip this node
+                        continue;
+                    }
+                }
+                check = false;
+                for (Node n: closed){
+                    if ((n.getX() == connection.getToNode().getX()) && (n.getY() == connection.getToNode().getY())){
+//                        Log.d("Astar", "Node with same position found in closed");
+                        temp=n;
+                        check=true;
+                        inClosed=true;
+                    }
+                }
+                if (check){
+                    if (temp.getCost()<connection.getCost()){
+//                        Log.d("AStar", "node skipped");
+                        // Skip this node
+                        continue;
+                    }
+                }
+//                Log.d("AStar", "added new node to open");
+
+                if (!inOpen && !inClosed){
+                    connection.getToNode().setParent(current);
+                    open.add(connection.getToNode());
+                }
+
+            }
+            if ((current.getX()==goal.getX()) && (current.getY()==goal.getY())){
+                break;
+            }
+
+            for (int i = 0; i < open.size(); i++) {
+                if ((open.get(i).getX() == current.getX()) && (open.get(i).getY() == current.getY())){
+                    open.remove(i);
+                }
+            }
+            closed.add(current);
+        }
+
+//        Log.d("AStar", String.valueOf(current.getX())+", "+String.valueOf(current.getY())+" | "+String.valueOf(start.getX())+", "+ String.valueOf(start.getY()+ " | " + String.valueOf(goal.getX()) + ", " + String.valueOf(goal.getY())));
+
+        while(current.getParent()!=null) {
+
+//            Log.d("AStar", String.valueOf(current.getX()) + ", " + String.valueOf(current.getX()) + " + costSoFar:" + String.valueOf(current.getCostSoFar()) + " + " + String.valueOf(current.getDepth()));
+            path.add(new Vector2(current.getX(),current.getY()));
+            current = current.getParent();
+
+        }
+
+//        Log.d("AStar", "DONE!");
+
+    }
+}

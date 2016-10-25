@@ -1,0 +1,42 @@
+package com.gamedev.techtronic.lunargame.Screens;
+
+import com.gamedev.techtronic.lunargame.gage.Game;
+import com.gamedev.techtronic.lunargame.gage.engine.ElapsedTime;
+import com.gamedev.techtronic.lunargame.gage.engine.graphics.IGraphics2D;
+import com.gamedev.techtronic.lunargame.gage.world.GameScreen;
+
+// placeholder, currently unused
+public class LunarPauseScreen extends GameScreen {
+    //Default constructor for the pause screen
+    public LunarPauseScreen(Game game) {
+        super("LunarPauseScreen", game);
+
+        super.initViewports(0.0F, 0.0F, 0.0F);
+        super.initAssets();
+        this.addComponents();
+    }
+
+    //Initialise all graphical assets used in the pause screen
+    protected void initBitmaps() {}
+
+    //Initialise all audio assets used in the pause screen
+    protected void initSounds() {}
+
+    //Add game objects to the pause screen
+    protected void addComponents() {}
+
+    //The pause screen's update method
+    @Override
+    public void update(ElapsedTime elapsedTime){}
+
+    //The pause screen's render method
+    @Override
+    public void draw(ElapsedTime elapsedTime, IGraphics2D graphics2D){}
+
+    @Override
+    public void dispose() {
+        mGame.getScreenManager().dispose();
+    }
+
+}
+

@@ -1,0 +1,199 @@
+package com.gamedev.techtronic.lunargame.Screens;
+
+import android.graphics.Color;
+import android.graphics.Paint;
+import android.util.Log;
+
+import com.gamedev.techtronic.lunargame.gage.Game;
+import com.gamedev.techtronic.lunargame.gage.engine.ElapsedTime;
+import com.gamedev.techtronic.lunargame.gage.engine.graphics.IGraphics2D;
+import com.gamedev.techtronic.lunargame.gage.ui.PushButton;
+import com.gamedev.techtronic.lunargame.gage.world.GameObject;
+import com.gamedev.techtronic.lunargame.gage.world.GameScreen;
+import com.gamedev.techtronic.lunargame.gageExtension.AnimatedSprite;
+
+public class LunarMenuScreen extends GameScreen {
+    private GameObject mainmenuBackground;
+    private AnimatedSprite mainmenuStartGamePlanet, mainmenuSpinnerSymbol;
+    private PushButton optionsButton, creditsButton, startGameButton;
+
+    private boolean zoomCheck = true;
+    private boolean bgMusicPlaying = false;
+
+    //Default constructor for the menu screen
+    public LunarMenuScreen (Game game) {
+        super("LunarMenuScreen", game);
+
+        fadeFromColour("black", 2, 0, 0);
+        temporarilyDisableInput(25);
+        super.initViewports(500.0F, 287.0F, 500.0F);
+        super.initAssets();
+        this.addComponents();
+    }
+
+    //Initialise all graphical assets used in the menu screen
+    protected void initBitmaps() {
+        mAssetManager.loadAndAddBitmap("mainmenuStartGamePlanet", "img/menus/main/mainMenuPlanet.png");
+        mAssetManager.loadAndAddBitmap("spinnerSymbol", "img/menus/main/symbolSpinnerSheet.png");
+        mAssetManager.loadAndAddBitmap("mainmenuBackground", "img/menus/main/mainMenuBackground.png");
+        mAssetManager.loadAndAddBitmap("optionsSymbol", "img/menus/main/optionsSymbol.png");
+        mAssetManager.loadAndAddBitmap("creditsPrompt", "img/menus/main/mainMenuTextCredits.png");
+        mAssetManager.loadAndAddBitmap("startGamePrompt", "img/menus/main/mainMenuTextStartGame.png");
+    }
+
+    //Initialise all audio assets used in the menu screen
+    protected void initSounds() {
+        //Music
+        //mAssetManager.loadAndAddMusic("mainMenuSong", "music/mainMenuSong.ogg");
+        //mAssetManager.loadAndAddMusic("creditsMenuSong", "music/creditsMenuSong.ogg");
+
+        //Sound effects
+        mAssetManager.loadAndAddSound("startGame", "sfx/menus/startGame.ogg");
+        mAssetManager.loadAndAddSound("menuForward", "sfx/menus/menuForward.ogg");
+        mAssetManager.loadAndAddSound("menuBack", "sfx/menus/menuBack.ogg");
+    }
+
+    //Add game objects to the menu screen
+    protected void addComponents() {
+        if (!bgMusicPlaying) {
+           // mAssetManager.getMusic("mainMenuSong").play();
+            //mAssetManager.getMusic("mainmenuSong").setLooping(true);
+            bgMusicPlaying = true;
+        }
+
+        mainmenuStartGamePlanet = new AnimatedSprite(2*mLayerViewport.getWidth()/3, 2*mLayerViewport.getHeight()/3, mAssetManager.getBitmap("mainmenuStartGamePlanet"), this);
+        mainmenuStartGamePlanet.setAnimation("mainmenu_start_game_planet", true);
+
+        mainmenuSpinnerSymbol = new AnimatedSprite(80,  80, mAssetManager.getBitmap("spinnerSymbol"), this);
+        mainmenuSpinnerSymbol.setAnimation("mainmenu_spinner_symbol", true);
+
+        mainmenuBackground = new GameObject(0, 0, mAssetManager.getBitmap("mainmenuBackground"), this);
+
+        //TODO: Bug fix - bounds not relative to drawn button on screen
+        optionsButton = new PushButton(mScreenViewport.left+mScreenViewport.width/15, mScreenViewport.top + mScreenViewport.height/10, mScreenViewport.width/10, mScreenViewport.width/10, "optionsSymbol", "optionsSymbol", "menuForward", this);
+        creditsButton = new PushButton(mScreenViewport.width/2, mScreenViewport.height/10*8, mScreenViewport.width/5, mScreenViewport.height/10, "creditsPrompt", "creditsPrompt", "startGame", this);
+        startGameButton = new PushButton(mScreenViewport.width/2, mScreenViewport.height/10*5, mScreenViewport.width/5, mScreenViewport.height/10, "startGamePrompt", "startGamePrompt", "startGame", this);
+    }
+
+    //The menu screen's update method
+    @Override
+    public void update(ElapsedTime elapsedTime) {
+        if (temporarilyDisableInput) {
+            tickDownDisableInputTime(1);
+        }
+        mainmenuStartGamePlanet.update(elapsedTime);
+        mainmenuSpinnerSymbol.update(elapsedTime);
+        optionsButton.update(elapsedTime);
+        creditsButton.update(elapsedTime);
+        startGameButton.update(elapsedTime);
+
+        if (!temporarilyDisableInput) {
+            resolveTouchEvents();
+        }
+
+        int viewportSizeUpperLimit = 700;
+        int viewportSizeLowerLimit = 500;
+
+        layerViewportSize += zoomCheck? +1 : -1;
+
+        if (layerViewportSize >= viewportSizeUpperLimit) {
+            zoomCheck = false;
+        }
+        else if (layerViewportSize <= viewportSizeLowerLimit) {
+            zoomCheck = true;
+        }
+
+        mLayerViewport.set(layerViewportX, layerViewportX * viewportRatio, layerViewportSize, layerViewportSize * viewportRatio);
+
+        if (exitScreen == true) {
+            if (screenFadeTo == "LunarLevelSelectScreen") {
+                mGame.getScreenManager().addScreen(new LunarLevelSelectScreen(mGame));
+                mGame.getScreenManager().setAsCurrentScreen("LunarLevelSelectScreen");
+            }
+            else if (screenFadeTo == "LunarCreditsScreen") {
+                mGame.getScreenManager().addScreen(new LunarCreditsScreen(mGame));
+                mGame.getScreenManager().setAsCurrentScreen("LunarCreditsScreen");
+            }
+            else if (screenFadeTo == "LunarOptionsScreen") {
+                LunarOptionsScreen lunarOptionsScreen = new LunarOptionsScreen(mGame);
+                lunarOptionsScreen.setPreviousScreen("LunarMenuScreen");
+                mGame.getScreenManager().addScreen(lunarOptionsScreen);
+                mGame.getScreenManager().setAsCurrentScreen("LunarOptionsScreen");
+            }
+            else {
+                Log.d("error", "no screen to fade to, incorrect arguments received in update()");
+            }
+
+            mGame.getScreenManager().removeScreen(this.mName);
+            exitScreen = false;
+            System.gc();
+        }
+
+    }
+
+    //Resolve any on screen touch events
+    private void resolveTouchEvents() {
+            if (optionsButton.pushTriggered()) {
+                //bgMusicPlaying = true;
+
+                mAssetManager.getSound("menuForward").play();
+
+                fadeToColour("black", 8, 0, 0, true, "LunarOptionsScreen");
+                disableInput = true;
+
+                System.gc();
+            }
+            else if (creditsButton.pushTriggered()) {
+
+                mAssetManager.getSound("menuBack").play();
+                //mAssetManager.getMusic("mainMenuSong").pause();
+
+                fadeToColour("black", 8, 100, 0, true, "LunarCreditsScreen");
+                disableInput = true;
+
+            }
+            else if (startGameButton.pushTriggered()) {
+                mAssetManager.getSound("startGame").play();
+               // mAssetManager.getMusic("mainmenuSong").stop();
+
+                fadeToColour("black", 8, 100, 0, true, "LunarLevelSelectScreen");
+                disableInput = true;
+
+            }
+    }
+
+    //The menu screen's draw method
+    @Override
+    public void draw(ElapsedTime elapsedTime, IGraphics2D graphics2D) {
+
+        //Log.d("test", "menu screen is drawing");
+        graphics2D.clear(Color.BLACK);
+        graphics2D.clipRect(mScreenViewport.toRect());
+
+        mainmenuBackground.draw(elapsedTime, graphics2D, mLayerViewport, mScreenViewport);
+        mainmenuStartGamePlanet.draw(elapsedTime, graphics2D, mLayerViewport, mScreenViewport);
+        mainmenuSpinnerSymbol.draw(elapsedTime, graphics2D, mLayerViewport, mScreenViewport);
+        optionsButton.draw(elapsedTime, graphics2D, mLayerViewport, mScreenViewport);
+        creditsButton.draw(elapsedTime, graphics2D, mLayerViewport, mScreenViewport);
+        startGameButton.draw(elapsedTime, graphics2D, mLayerViewport, mScreenViewport);
+
+        super.draw(elapsedTime, graphics2D);
+    }
+
+    @Override
+    public void pause() {
+        /*mAssetManager.getMusic("mainMenuSong").pause();*/
+    }
+
+    @Override
+    public void resume() {
+        if (!bgMusicPlaying) {
+            mAssetManager.getMusic("mainMenuSong").play();
+        }
+    }
+
+    @Override
+    public void dispose() {
+        //mGame.getScreenManager().dispose();
+    }
+}

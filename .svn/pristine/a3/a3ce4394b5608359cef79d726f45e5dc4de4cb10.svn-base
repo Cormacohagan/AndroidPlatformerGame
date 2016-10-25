@@ -1,0 +1,306 @@
+package com.gamedev.techtronic.lunargame.gage.world;
+
+import android.graphics.Color;
+import android.graphics.Paint;
+import android.util.Log;
+
+import com.gamedev.techtronic.lunargame.Screens.LunarMenuScreen;
+import com.gamedev.techtronic.lunargame.gage.Game;
+import com.gamedev.techtronic.lunargame.gage.engine.AssetStore;
+import com.gamedev.techtronic.lunargame.gage.engine.ElapsedTime;
+import com.gamedev.techtronic.lunargame.gage.engine.graphics.CanvasGraphics2D;
+import com.gamedev.techtronic.lunargame.gage.engine.graphics.CanvasRenderSurface;
+import com.gamedev.techtronic.lunargame.gage.engine.graphics.IGraphics2D;
+import com.gamedev.techtronic.lunargame.gage.engine.graphics.IRenderSurface;
+
+/**
+ * Game screen class acting as a container for a coherent section of the game (a
+ * level, configuration screen, etc.).
+ * 
+ * @version 1.0
+ */
+public abstract class GameScreen {
+
+	// /////////////////////////////////////////////////////////////////////////
+	// Properties
+	// /////////////////////////////////////////////////////////////////////////
+
+	protected AssetStore mAssetManager;
+	protected ScreenViewport mScreenViewport;
+	protected LayerViewport mLayerViewport;
+	protected float viewportRatio;
+	protected float layerViewportX;
+	protected float layerViewportY;
+	protected float layerViewportSize;
+	protected Paint fadePaint;
+	protected boolean screenfadeNow = false, exitScreen = false, disableInput = false, temporarilyDisableInput = false;
+	protected int disableInputTimeLeft;
+	protected String screenFadeTo;
+	protected CanvasRenderSurface renderSurface;
+	/**
+	 * Name that is given to this game screen
+	 */
+	protected final String mName;
+
+	/**
+	 * Return the name of this game screen
+	 * 
+	 * @return Name of this game screen
+	 */
+	public String getName() {
+		return mName;
+	}
+
+	/**
+	 * Game to which game screen belongs
+	 */
+	protected final Game mGame;
+
+	/**
+	 * Return the game to which this game screen is attached
+	 * 
+	 * @return Game to which screen is attached
+	 */
+
+	public Game getGame() {
+		return mGame;
+	}
+
+	// /////////////////////////////////////////////////////////////////////////
+	// Constructors
+	// /////////////////////////////////////////////////////////////////////////
+
+	/**
+	 * Create a new game screen associated with the specified game instance
+	 * 
+	 * @param game
+	 *            Game instance to which the game screen belongs
+	 */
+	public GameScreen(String name, Game game) {
+		mName = name;
+		mGame = game;
+		fadePaint = new Paint();
+		fadePaint.setStyle(Paint.Style.FILL);
+		fadePaint.setColor(Color.BLACK);
+		fadePaint.setAlpha(0);
+	}
+
+	// /////////////////////////////////////////////////////////////////////////
+	// Update and Draw
+	// /////////////////////////////////////////////////////////////////////////
+
+	/**
+	 * Update the game screen. Invoked automatically from the game.
+	 * 
+	 * NOTE: If the update is multi-threaded control should not be returned from
+	 * the update call until all update processes have completed.
+	 * 
+	 * @param elapsedTime
+	 *            Elapsed time information for the frame
+	 */
+	public abstract void update(ElapsedTime elapsedTime);
+
+	/**
+	 * Draw the game screen. Invoked automatically from the game.
+	 * 
+	 * @param elapsedTime
+	 *            Elapsed time information for the frame
+	 * @param graphics2D
+	 *            Graphics instance used to draw the screen
+	 */
+	//public abstract void draw(ElapsedTime elapsedTime, IGraphics2D graphics2D);
+
+	public void draw(ElapsedTime elapsedTime, IGraphics2D graphics2D) {
+
+		//if (screenfadeNow == true) {
+			//Log.d("test", "fading rectangle being drawn");
+		//Log.d("GameScreen.draw()", mGame.getScreenManager().getCurrentScreen().mName + "'s fade alpha value: " + fadePaint.getAlpha());
+				graphics2D.drawRect(mScreenViewport.left, mScreenViewport.top,
+						mScreenViewport.right, mScreenViewport.bottom, fadePaint);
+			//}
+	}
+
+	// /////////////////////////////////////////////////////////////////////////
+	// Android Life Cycle
+	// /////////////////////////////////////////////////////////////////////////
+
+	/**
+	 * Invoked automatically by the game whenever the app is paused.
+	 */
+	public void pause() {
+	}
+
+	/**
+	 * Invoked automatically by the game whenever the app is resumed.
+	 */
+	public void resume() {
+	}
+
+	/**
+	 * Invoked automatically by the game whenever the app is disposed.
+	 */
+	public void dispose() {
+	}
+
+	protected void initAssets() {
+		mAssetManager = mGame.getAssetManager();
+		this.initBitmaps();
+		this.initSounds();
+	}
+
+	protected abstract void initBitmaps();
+
+	protected abstract void initSounds();
+
+	protected abstract void addComponents();
+
+	//protected abstract void setScreenState(ScreenState screenState);
+
+	//Initialise the screen/layer viewports
+	protected void initViewports(float layerViewportX, float layerViewportY, float layerViewportSize) {
+		this.layerViewportX = layerViewportX;
+		this.layerViewportY = layerViewportY;
+		this.layerViewportSize = layerViewportSize;
+		//Create a screen viewport with the width and height of the game screen
+		mScreenViewport = new ScreenViewport(0, 0, mGame.getScreenWidth(), mGame.getScreenHeight());
+
+
+		viewportRatio = (float) mScreenViewport.height / mScreenViewport.width;
+		Log.d("gg", "" + viewportRatio);
+
+		if (mScreenViewport.width > mScreenViewport.height) {
+			mLayerViewport = new LayerViewport(layerViewportX, layerViewportY, layerViewportSize, layerViewportSize * viewportRatio);
+		} else {
+			mLayerViewport = new LayerViewport(layerViewportY, layerViewportX, layerViewportSize * viewportRatio, layerViewportSize);
+		}
+	}
+
+	// receives a colour to fade the screen to. Receives a string that represents the colour to fade to
+	// To see the colours available, see the method description for Color#parseColor()
+	// also receives the screen to fade to after a fade has been completed
+	// if method receives false boolean for "removeScreenAfterFade", the screen will stay this colour and not be removed. Use fadeFromColour() when required.
+	// In the above case, any String can be sent for "screenToFade"
+	protected void fadeToColour(final String colour, final int fadeRate, final int delayBeforeFade, final int delayAfterFade, final boolean removeScreenAfterFade, final String screenToFadeTo) {
+
+		Runnable fadeToColour = new Runnable() {
+			public void run() {
+				Log.d("test", "fading thread has started running");
+				Color color = new Color();
+				fadePaint.setColor(color.parseColor(colour));
+				fadePaint.setAlpha(0);
+
+				try {
+					Thread.sleep(delayBeforeFade);
+
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				}
+
+				int fadeValue = 0;
+				screenfadeNow = true;
+
+				while (fadeValue < 255) {
+					try {
+						//Log.d("test", "fade value: " + fadeValue);
+						fadePaint.setAlpha(fadeValue);
+						fadeValue+=fadeRate;
+						Thread.sleep(1);
+						//mGame.getScreenManager().removeScreen(GameScreen.this.mName);
+						//mGame.getScreenManager().addScreen(new LunarMenuScreen(mGame));
+						//mGame.getScreenManager().setAsCurrentScreen("LunarMenuScreen");
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					}
+				}
+				try {
+					Log.d("test", "fading complete, now waiting before ending");
+					Thread.sleep(delayAfterFade);
+					Log.d("test", "waiting finished");
+					screenfadeNow = false;
+
+					if (removeScreenAfterFade == true) {
+						exitScreen = true;
+						screenFadeTo = screenToFadeTo;
+					}
+
+					//fadeValue = 0;
+					//fadePaint.setAlpha(fadeValue);
+
+					return;
+				} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+			}
+		};
+		(new Thread(fadeToColour)).start();
+
+	}
+
+	protected void resetFade() {
+		fadePaint.setAlpha(0);
+	}
+
+
+	public void fadeFromColour(final String colour, final int fadeRate, final int delayBeforeFade, final int delayAfterFade) {
+
+		fadePaint.setAlpha(255);
+
+		Runnable fadeFromColour = new Runnable() {
+			public void run() {
+				Log.d("test", "fading thread has started running");
+				Color color = new Color();
+				fadePaint.setColor(color.parseColor(colour));
+
+				int fadeValue = 255;
+				screenfadeNow = true;
+
+				try {
+
+					Thread.sleep(delayBeforeFade);
+
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				}
+
+				while (fadeValue > 0) {
+					try {
+						Log.d("test", "fade value: " + fadeValue);
+						fadePaint.setAlpha(fadeValue);
+						fadeValue-=fadeRate;
+						Thread.sleep(1);
+						//mGame.getScreenManager().removeScreen(GameScreen.this.mName);
+						//mGame.getScreenManager().addScreen(new LunarMenuScreen(mGame));
+						//mGame.getScreenManager().setAsCurrentScreen("LunarMenuScreen");
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					}
+				}
+				try {
+					Log.d("test", "fading complete, now waiting before ending");
+					Thread.sleep(delayAfterFade);
+					Log.d("test", "waiting finished");
+					screenfadeNow = false;
+					return;
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				}
+			}
+		};
+		(new Thread(fadeFromColour)).start();
+	}
+
+	// disable any input for this game screen, measured in ms.
+	// gamescreen subclass should check GameScreen.disabled = true/false and check inputs or not accordingly
+	public void temporarilyDisableInput(int timeToDisableInput) {
+		temporarilyDisableInput = true;
+		disableInputTimeLeft = timeToDisableInput;
+	}
+
+	public void tickDownDisableInputTime(int amountToTickDown) {
+		disableInputTimeLeft -= amountToTickDown;
+		if (disableInputTimeLeft <=0) {
+			temporarilyDisableInput = false;
+		}
+	}
+
+}

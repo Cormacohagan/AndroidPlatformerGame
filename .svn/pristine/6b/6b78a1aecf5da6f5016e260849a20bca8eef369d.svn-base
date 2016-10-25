@@ -1,0 +1,14 @@
+A fresh pull from the SVN and doing these steps seems to fix any issues encountered so far.
+It's a bit too thorough, but just trying to cover all bases:
+
+- Make an empty folder in your AndroidStudioProjects folder called LunarGame
+- File > New > Project from Version Control > Subversion
+- Select the trunk folder (http://www.eeecs.qub.ac.uk/svn/gp27 > LunarGame > Trunk)
+- Choose the LunarGame folder you created, select TortoiseSVN version 1.8
+- DON'T BUILD THE PROJECT YET. Go into your modules.xml file,
+    (make sure you're in "Project" view and not "Android" view so you can see the xml file)
+    and there'll likely be 2 LunarGame module lines (<module fileurl="file://$PROJECT_DIR$/LunarGame.iml" filepath="$PROJECT_DIR$/LunarGame.iml" />)
+    remove one of these lines, now build and run the project. It should work so far
+- Now update your ignore list so you're not committing badboy files to our shared project
+- Phil's video shows what files & folders to ignore (link is timestamped): https://youtu.be/sTzeoL0O3dE?t=1867
+- With these changes done, try doing a commit to the SVN and letting everyone else download it to see if it broke anything

@@ -1,0 +1,33 @@
+package com.gamedev.techtronic.lunargame;
+
+import android.graphics.Bitmap;
+
+import com.gamedev.techtronic.lunargame.gage.world.GameObject;
+import com.gamedev.techtronic.lunargame.gage.world.GameScreen;
+
+// base class for objects that trigger events in the game world
+// invisible, has a fixed location in the world. When the player interacts with it,
+// method "triggerActivated" should be called
+
+public abstract class Trigger extends GameObject {
+
+    protected boolean activated;
+
+    public Trigger(float x, float y, float width, float height,
+                   Bitmap bitmap, GameScreen gameScreen) {
+        super(x, y, width, height, bitmap, gameScreen);
+    }
+
+    // overwritten by subclasses, but should set Trigger.activated = state in the method body
+    public void setActivated(boolean state) {
+    }
+
+    public abstract void execute();
+
+
+    public void changeTriggerState(boolean state) {
+        activated = state;
+    }
+
+
+}

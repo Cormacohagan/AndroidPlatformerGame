@@ -1,0 +1,45 @@
+package com.gamedev.techtronic.lunargame.Tools;
+
+/**
+ * Created by Cormac O'Hagan on 25/02/2016.
+ */
+import android.graphics.Bitmap;
+
+import com.gamedev.techtronic.lunargame.Screens.BossScreen;
+import com.gamedev.techtronic.lunargame.Trigger;
+import com.gamedev.techtronic.lunargame.gage.engine.ScreenManager;
+import com.gamedev.techtronic.lunargame.gage.world.GameScreen;
+
+// sits in game world as an invisible object. if player touches this trigger,
+// the game screen's dialogue box should receive this trigger's dialogue ID
+// so that the dialogue box can retrieve the appropriate text & info from txt/dialogueText
+
+public class LevelTransitionTrigger extends Trigger {
+
+    private String screenID;
+
+    public LevelTransitionTrigger (String screenID, float x, float y, float width, float height,
+                            Bitmap bitmap, GameScreen gameScreen) {
+        super(x, y, width, height, bitmap, gameScreen);
+        this.screenID = screenID;
+    }
+
+    @Override
+    public void setActivated(boolean state){
+        activated = state;
+    }
+
+    @Override
+    public void execute() {
+        ScreenManager S = this.mGameScreen.getGame().getScreenManager();
+        S.removeScreen(this.mGameScreen.getName());
+        S.addScreen(new BossScreen(mGameScreen.getGame()));
+        S.setAsCurrentScreen(this.screenID);
+        System.gc();
+    }
+
+
+    public String getDialogueID() {
+        return screenID;
+    }
+}

@@ -1,0 +1,170 @@
+package com.gamedev.techtronic.lunargame.Screens;
+
+import android.graphics.Color;
+import android.graphics.Paint;
+import android.util.Log;
+
+import com.gamedev.techtronic.lunargame.LunarGame;
+import com.gamedev.techtronic.lunargame.gage.Game;
+import com.gamedev.techtronic.lunargame.gage.engine.ElapsedTime;
+import com.gamedev.techtronic.lunargame.gage.engine.graphics.IGraphics2D;
+import com.gamedev.techtronic.lunargame.gage.ui.PushButton;
+import com.gamedev.techtronic.lunargame.gage.world.GameScreen;
+
+public class LunarLevelSelectScreen extends GameScreen {
+
+    private LunarGame game;
+    private Paint backgroundPaint, textPaint;
+    private PushButton levelTutorial, levelOne, levelBoss;
+    private LunarCharacterSelectScreen lunarCharacterSelectScreen;
+    private int tempLevelChose;
+    private boolean stopUpdatingButtons = false;
+
+    //Default constructor for the level select screen
+    public LunarLevelSelectScreen(Game game) {
+        super("LunarLevelSelectScreen", game);
+
+        fadeFromColour("black", 5, 0, 0);
+
+        super.initViewports(500.0F, 287.0F, 500.0F);
+        super.initAssets();
+        this.addComponents();
+    }
+
+    //Initialise all graphical assets used in the level select screen
+    protected void initBitmaps() {
+
+        mAssetManager.loadAndAddBitmap("levelIntroIcon", "img/menus/levelSelect/levelIntroIcon.png");
+        mAssetManager.loadAndAddBitmap("levelOneIcon", "img/menus/levelSelect/levelOneIcon.png");
+        mAssetManager.loadAndAddBitmap("levelBossIcon", "img/menus/levelSelect/levelBossIcon.png");
+        mAssetManager.loadAndAddBitmap("levelSelected", "img/menus/shared/levelSelected.png");
+        mAssetManager.loadAndAddBitmap("player", "img/inGame/levels/shared/playerSheet.png");
+    }
+
+    //Initialise all audio assets used in the level select screen
+    protected void initSounds() {}
+
+    //Add game objects to the level select screen
+    protected void addComponents() {
+
+        game = (LunarGame)this.getGame();
+
+        backgroundPaint = new Paint();
+        backgroundPaint.setStyle(Paint.Style.FILL);
+        backgroundPaint.setColor(Color.DKGRAY);
+
+        textPaint = new Paint();
+        textPaint.setStyle(Paint.Style.STROKE);
+        textPaint.setColor(Color.WHITE);
+        textPaint.setTextSize(90);
+        textPaint.setTextAlign(Paint.Align.CENTER);
+
+        levelTutorial = new PushButton(210, 360, 280, 280,"levelIntroIcon", "levelSelected", this);
+        levelOne = new PushButton(640, 360, 280, 280,"levelOneIcon", "levelSelected", this);
+        levelBoss = new PushButton(1060, 360, 280, 280,"levelBossIcon", "levelSelected", this);
+
+    }
+
+    private void resolveTouchEvents(LunarGame game) {
+        if (levelTutorial.pushTriggered()) {
+
+            fadeToColour("black", 5, 500, 0, true, "LunarLevelSelectScreen");
+            disableInput = true;
+            Log.d("test", "level tutorial chosen");
+
+            tempLevelChose = 0;
+            stopUpdatingButtons = true;
+
+        }
+        else if (levelOne.pushTriggered()) {
+
+            fadeToColour("black", 5, 500, 0, true, "LunarLevelSelectScreen");
+            disableInput = true;
+            Log.d("test", "level 1 chosen");
+
+            tempLevelChose = 1;
+            stopUpdatingButtons = true;
+
+        }
+        else if (levelBoss.pushTriggered()) {
+
+            fadeToColour("black", 5, 500, 0, true, "LunarLevelSelectScreen");
+            disableInput = true;
+            Log.d("test", "level boss chosen");
+
+            //tempLevelChose = 2;
+            tempLevelChose = 1;
+            stopUpdatingButtons = true;
+
+        }
+
+    }
+
+    //The level select screen's update method
+    @Override
+    public void update(ElapsedTime elapsedTime){
+
+        if (!stopUpdatingButtons) {
+            levelTutorial.update(elapsedTime);
+            levelOne.update(elapsedTime);
+            levelBoss.update(elapsedTime);
+        }
+
+
+        if (exitScreen) {
+            LunarCharacterSelectScreen lunarCharacterSelectScreen = new LunarCharacterSelectScreen(game);
+
+            if (tempLevelChose == 0) {
+                lunarCharacterSelectScreen.levelChosen = "LEVEL_INTRO";
+            }
+            else if (tempLevelChose == 1) {
+                lunarCharacterSelectScreen.levelChosen = "LEVEL_ONE";
+            }
+            else if (tempLevelChose == 2) {
+                lunarCharacterSelectScreen.levelChosen = "LEVEL_BOSS";
+            }
+            else {
+                Log.d("error", "no level chosen in level select screen");
+                return;
+            }
+
+            mGame.getScreenManager().removeScreen(this.mName);
+            game.getScreenManager().addScreen(lunarCharacterSelectScreen);
+            game.getScreenManager().setAsCurrentScreen("LunarCharacterSelectScreen");
+            this.resetFade();
+            exitScreen = false;
+        }
+
+        if (!disableInput) {
+            resolveTouchEvents(game);
+        }
+    }
+
+    //The level select screen's render method
+    @Override
+    public void draw(ElapsedTime elapsedTime, IGraphics2D graphics2D){
+
+        graphics2D.drawRect(mScreenViewport.left, mScreenViewport.top,
+                mScreenViewport.right, mScreenViewport.bottom, backgroundPaint);
+
+        textPaint.setTextSize(70);
+        graphics2D.drawText("CHOOSE A LEVEL", mScreenViewport.width / 2, (mScreenViewport.height / 10) * 2, textPaint);
+        textPaint.setTextSize(45);
+        graphics2D.drawText("INTRO LEVEL", mScreenViewport.width / 100 * 18, (mScreenViewport.height / 100) * 79, textPaint);
+        graphics2D.drawText("FIRST LEVEL", mScreenViewport.width / 2, (mScreenViewport.height / 100) * 79, textPaint);
+        graphics2D.drawText("BOSS LEVEL", mScreenViewport.width / 100 * 88, (mScreenViewport.height / 100) * 79, textPaint);
+
+        levelTutorial.draw(elapsedTime, graphics2D, mLayerViewport, mScreenViewport);
+        levelOne.draw(elapsedTime, graphics2D, mLayerViewport, mScreenViewport);
+        levelBoss.draw(elapsedTime, graphics2D, mLayerViewport, mScreenViewport);
+
+        super.draw(elapsedTime, graphics2D);
+    }
+
+    @Override
+    public void dispose() {
+        mGame.getScreenManager().dispose();
+    }
+
+}
+
